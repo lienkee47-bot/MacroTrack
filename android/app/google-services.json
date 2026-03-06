@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "351550650121",
+    "project_id": "macrotrack-a4780",
+    "storage_bucket": "macrotrack-a4780.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:351550650121:android:d5da60b92505ae222b05d8",
+        "android_client_info": {
+          "package_name": "com.argentum.macrotrack"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDfHyGryAIUXT_x4Rm_JpA4iJILuQ74iIk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
