@@ -56,8 +56,17 @@ class _SignupScreenState extends State<SignupScreen> {
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF006666))),
                     ),
-                    validator: (val) => val!.isEmpty ? 'Enter an email' : null,
-                    onChanged: (val) => setState(() => email = val),
+                    validator: (val) {
+                      if (val == null || val.isEmpty) {
+                      return 'Enter an email';
+                      }
+                      // This simple check is often better than a complex RegEx
+                      if (!val.contains('@')) {
+                      return 'Please supply a valid email';
+                      }
+                      return null;
+                    },
+                    onChanged: (val) => setState(() => email = val.trim()),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
