@@ -39,8 +39,7 @@ class AuthService {
             'height': 0,
           },
           'preferences': {
-            'notifications': true,
-            'units': 'Imperial',
+            'units': 'Metric',
           },
           'dailyTargets': {
             'kcal': 2000,
@@ -54,6 +53,15 @@ class AuthService {
     } catch (e) {
       debugPrint(e.toString());
       return null;
+    }
+  }
+
+  // Password Reset
+  Future<void> sendPasswordReset(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      debugPrint(e.toString());
     }
   }
 
