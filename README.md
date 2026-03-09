@@ -27,34 +27,27 @@ Use Google Cloud Firestore for real-time data persistence. The database is desig
 Stores individual user profiles and daily target metrics.
 * Document ID: Unique User ID (UID) from Firebase Auth.
 * Fields:
-* `name`: String (registered name during sign-up)
-* `email`: String (registered email during sign-up)
-
-
-* `personalStats` (Map): User-defined biometric data. No function for now, may be used for calculations in future features.
-* `age`: Number
-* `height`: Number (in cm)
-* `weight`: Number (in kg)
-
-
-* `dailyTargets` (Map): User-defined daily intake thresholds.
-* `kcal`: Number (calorie intake in kcal)
-* `protein`: Number (protein intake in g)
-* `carbs`: Number (carbohydrates intake in g)
-* `fat`: Number (fats intake in g)
-
-
+    * `name`: String (registered name during sign-up)
+    * `email`: String (registered email during sign-up)
+    * `personalStats` (Map): User-defined biometric data. No function for now, may be used for calculations in future features.
+        * `age`: Number
+        * `height`: Number (in cm)
+        * `weight`: Number (in kg)
+    * `dailyTargets` (Map): User-defined daily intake thresholds for progress calculations.
+        * `kcal`: Number (calorie intake in kcal)
+        * `protein`: Number (protein intake in g)
+        * `carbs`: Number (carbohydrates intake in g)
+        * `fat`: Number (fats intake in g)
 
 #### 2. `foods` Collection
 A top-level collection containing standardized nutritional data entries for search and selection, i.e. the Food Library.
 * Document ID: Auto-generated unique string.
 * Fields:
-* `name`: String (name of food)
-* `kcal`: Number (food's energy content in kcal)
-* `protein`: Number (food's protein content in g)
-* `carbs`: Number (food's carbohydrates content in g)
-* `fat`: Number (food's fats content in g)
-
+    * `name`: String (name of food)
+    * `kcal`: Number (food's energy content in kcal)
+    * `protein`: Number (food's protein content in g)
+    * `carbs`: Number (food's carbohydrates content in g)
+    * `fat`: Number (food's fats content in g)
 
 ## 🎨 Design Philosophy
 The UI utilizes a high-contrast Orange (#ff6700) and Teal (#006666) color scheme on a pure white background to ensure maximum readability and a modern, professional aesthetic.
