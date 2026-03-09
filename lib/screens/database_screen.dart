@@ -45,13 +45,21 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
   }
 
   void _saveTargets(String uid, FirestoreService db) {
-    db.updateUserTargets(
-      uid,
-      num.tryParse(_kcalTargetCtrl.text) ?? 2000,
-      num.tryParse(_protTargetCtrl.text) ?? 150,
-      num.tryParse(_carbTargetCtrl.text) ?? 200,
-      num.tryParse(_fatTargetCtrl.text) ?? 65,
-    );
+    final kcal = num.tryParse(_kcalTargetCtrl.text) ?? 2000;
+    final protein = num.tryParse(_protTargetCtrl.text) ?? 150;
+    final carbs = num.tryParse(_carbTargetCtrl.text) ?? 200;
+    final fat = num.tryParse(_fatTargetCtrl.text) ?? 65;
+
+    db.updateUserTargets(uid, kcal, protein, carbs, fat);
+    
+    // Instantly reflect fallbacks in the UI
+    setState(() {
+      _kcalTargetCtrl.text = kcal.toString();
+      _protTargetCtrl.text = protein.toString();
+      _carbTargetCtrl.text = carbs.toString();
+      _fatTargetCtrl.text = fat.toString();
+    });
+
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Targets Saved', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
   }
 
@@ -84,25 +92,39 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {},
-        ),
-        title: const Text('Database', style: TextStyle(fontWeight: FontWeight.bold)),
-        centerTitle: true,
+        automaticallyImplyLeading: false,
+        title: const Text('Database', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+        centerTitle: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'My Daily Targets',
-              style: TextStyle(
-                color: Color(0xFFFF6700),
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'My Daily Targets',
+                  style: TextStyle(
+                    color: Color(0xFFFF6700),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () => _saveTargets(user.uid, db),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFF6700),
+                    minimumSize: const Size(0, 32),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text('Save Targets', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             StreamBuilder<DocumentSnapshot>(
@@ -142,14 +164,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                 );
               }
             ),
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => _saveTargets(user.uid, db),
-                child: const Text('Save Targets', style: TextStyle(color: Color(0xFFFF6700))),
-              ),
-            ),
+
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
