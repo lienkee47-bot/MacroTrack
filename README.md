@@ -44,6 +44,8 @@ A top-level collection containing standardized nutritional data entries for sear
 * Document ID: Auto-generated unique string.
 * Fields:
     * `name`: String (name of food)
+    * `servingSize`: Number (quantity of food)
+    * `servingUnit`: String (unit of measurement, in g, ml or pcs for now)
     * `kcal`: Number (food's energy content in kcal)
     * `protein`: Number (food's protein content in g)
     * `carbs`: Number (food's carbohydrates content in g)
