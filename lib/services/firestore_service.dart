@@ -11,14 +11,32 @@ class FirestoreService {
     return _db.collection('foods').snapshots();
   }
 
-  Future<void> addFood(String name, num kcal, num prot, num carb, num fat) {
+  Future<void> addFood(String name, num servingSize, String servingUnit, num kcal, num prot, num carb, num fat) {
     return _db.collection('foods').add({
       'name': name,
+      'servingSize': servingSize,
+      'servingUnit': servingUnit,
       'kcal': kcal,
       'protein': prot,
       'carbs': carb,
       'fat': fat,
     });
+  }
+
+  Future<void> updateFood(String docId, String name, num servingSize, String servingUnit, num kcal, num prot, num carb, num fat) {
+    return _db.collection('foods').doc(docId).update({
+      'name': name,
+      'servingSize': servingSize,
+      'servingUnit': servingUnit,
+      'kcal': kcal,
+      'protein': prot,
+      'carbs': carb,
+      'fat': fat,
+    });
+  }
+
+  Future<void> deleteFood(String docId) {
+    return _db.collection('foods').doc(docId).delete();
   }
 
   // Daily Targets & User Profiles

@@ -21,12 +21,13 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
   // New Food Controllers
   final _foodNameCtrl = TextEditingController();
   final _servingSizeCtrl = TextEditingController(text: '100');
-  final _servingUnit = 'g'; // For simplicity, kept static in state
+  String _servingUnit = 'g';
   final _foodKcalCtrl = TextEditingController();
   final _foodProtCtrl = TextEditingController();
   final _foodCarbCtrl = TextEditingController();
   final _foodFatCtrl = TextEditingController();
 
+  String _searchQuery = '';
   bool _targetsInitialized = false;
 
   @override
@@ -63,21 +64,213 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Targets Saved', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
   }
 
-  void _saveNewFood(FirestoreService db) {
+  void _saveFood(FirestoreService db, {String? docId}) {
     if (_foodNameCtrl.text.isEmpty) return;
-    db.addFood(
-      _foodNameCtrl.text,
-      num.tryParse(_foodKcalCtrl.text) ?? 0,
-      num.tryParse(_foodProtCtrl.text) ?? 0,
-      num.tryParse(_foodCarbCtrl.text) ?? 0,
-      num.tryParse(_foodFatCtrl.text) ?? 0,
-    );
+    
+    final name = _foodNameCtrl.text;
+    final size = num.tryParse(_servingSizeCtrl.text) ?? 100;
+    final kcal = num.tryParse(_foodKcalCtrl.text) ?? 0;
+    final prot = num.tryParse(_foodProtCtrl.text) ?? 0;
+    final carb = num.tryParse(_foodCarbCtrl.text) ?? 0;
+    final fat = num.tryParse(_foodFatCtrl.text) ?? 0;
+
+    if (docId == null) {
+      db.addFood(name, size, _servingUnit, kcal, prot, carb, fat);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Added to Library', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
+    } else {
+      db.updateFood(docId, name, size, _servingUnit, kcal, prot, carb, fat);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Updated', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
+    }
+
     _foodNameCtrl.clear();
+    _servingSizeCtrl.text = '100';
     _foodKcalCtrl.clear();
     _foodProtCtrl.clear();
     _foodCarbCtrl.clear();
     _foodFatCtrl.clear();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Added to Library', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
+    Navigator.pop(context);
+  }
+
+  void _deleteFood(FirestoreService db, String docId) {
+    db.deleteFood(docId);
+    _foodNameCtrl.clear();
+    _servingSizeCtrl.text = '100';
+    _foodKcalCtrl.clear();
+    _foodProtCtrl.clear();
+    _foodCarbCtrl.clear();
+    _foodFatCtrl.clear();
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Deleted', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
+  }
+
+  void _showAddFoodModal(FirestoreService db, {String? docId, Map<String, dynamic>? existingData}) {
+    if (existingData != null) {
+      _foodNameCtrl.text = existingData['name']?.toString() ?? '';
+      _servingSizeCtrl.text = existingData['servingSize']?.toString() ?? '100';
+      _servingUnit = existingData['servingUnit']?.toString() ?? 'g';
+      _foodKcalCtrl.text = existingData['kcal']?.toString() ?? '';
+      _foodProtCtrl.text = existingData['protein']?.toString() ?? '';
+      _foodCarbCtrl.text = existingData['carbs']?.toString() ?? '';
+      _foodFatCtrl.text = existingData['fat']?.toString() ?? '';
+    } else {
+      _foodNameCtrl.clear();
+      _servingSizeCtrl.text = '100';
+      _servingUnit = 'g';
+      _foodKcalCtrl.clear();
+      _foodProtCtrl.clear();
+      _foodCarbCtrl.clear();
+      _foodFatCtrl.clear();
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 20, right: 20, top: 20,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(docId == null ? 'Create New Food' : 'Edit Food', style: const TextStyle(color: Color(0xFFFF6700), fontWeight: FontWeight.bold, fontSize: 18)),
+                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('FOOD NAME', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
+                      child: TextField(
+                        controller: _foodNameCtrl,
+                        decoration: const InputDecoration(border: InputBorder.none, hintText: 'e.g. Almond Butter', hintStyle: TextStyle(color: Colors.grey, fontSize: 14)),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text('SERVING SIZE', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
+                            child: TextField(
+                              controller: _servingSizeCtrl,
+                              decoration: const InputDecoration(border: InputBorder.none, hintText: '100', hintStyle: TextStyle(color: Colors.grey, fontSize: 14)),
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          flex: 1,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: _servingUnit,
+                                isExpanded: true,
+                                items: ['g', 'ml', 'pcs'].map((String value) {
+                                  return DropdownMenuItem<String>(value: value, child: Text(value));
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setModalState(() {
+                                      _servingUnit = val;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(child: _buildMacroInput('Kcal', _foodKcalCtrl)),
+                        const SizedBox(width: 8),
+                        Expanded(child: _buildMacroInput('Prot (g)', _foodProtCtrl)),
+                        const SizedBox(width: 8),
+                        Expanded(child: _buildMacroInput('Carb (g)', _foodCarbCtrl)),
+                        const SizedBox(width: 8),
+                        Expanded(child: _buildMacroInput('Fat (g)', _foodFatCtrl)),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    if (docId == null)
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => _saveFood(db),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF6700),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: const Text('Save to Library', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                      )
+                    else
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: ElevatedButton(
+                              onPressed: () => _deleteFood(db, docId),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF006666),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Icon(Icons.delete),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 3,
+                            child: ElevatedButton(
+                              onPressed: () => _saveFood(db, docId: docId),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFF6700),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                              child: const Text('Save to Library', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            );
+          }
+        );
+      }
+    );
   }
 
   @override
@@ -178,7 +371,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {},
+                  onPressed: () => _showAddFoodModal(db),
                   icon: const Icon(Icons.add, size: 16, color: Colors.white),
                   label: const Text('New', style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
@@ -199,7 +392,8 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                 color: Colors.grey[100],
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const TextField(
+              child: TextField(
+                onChanged: (val) => setState(() => _searchQuery = val),
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   icon: Icon(Icons.search, color: Colors.grey),
@@ -214,7 +408,16 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 
-                final docs = snapshot.data!.docs;
+                var docs = snapshot.data!.docs;
+                
+                if (_searchQuery.isNotEmpty) {
+                  docs = docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final name = (data['name'] ?? '').toString().toLowerCase();
+                    return name.contains(_searchQuery.toLowerCase());
+                  }).toList();
+                }
+                
                 if (docs.isEmpty) return const Text("No custom foods found.");
                 
                 return ListView.builder(
@@ -223,133 +426,23 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     var food = docs[index].data() as Map<String, dynamic>;
-                    return _buildFoodLibraryItem(
-                      food['name'] ?? 'Unknown',
-                      '${food['kcal']} kcal per 100g',
-                      '${food['protein']}p',
-                      '${food['carbs']}c',
-                      '${food['fat']}f',
+                    final size = food['servingSize'] ?? 100;
+                    final unit = food['servingUnit'] ?? 'g';
+                    final kcal = food['kcal'] ?? 0;
+                    
+                    return GestureDetector(
+                      onLongPress: () => _showAddFoodModal(db, docId: docs[index].id, existingData: food),
+                      child: _buildFoodLibraryItem(
+                        food['name'] ?? 'Unknown',
+                        '$kcal kcal per $size$unit',
+                        '${food['protein']}p',
+                        '${food['carbs']}c',
+                        '${food['fat']}f',
+                      ),
                     );
                   },
                 );
               }
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              'Create New Food',
-              style: TextStyle(
-                color: Color(0xFFFF6700),
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.grey[200]!),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withValues(alpha: 0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('FOOD NAME', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: TextField(
-                      controller: _foodNameCtrl,
-                      decoration: const InputDecoration(border: InputBorder.none, hintText: 'e.g. Almond Butter', hintStyle: TextStyle(color: Colors.grey, fontSize: 14)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('SERVING SIZE', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 2,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: TextField(
-                            controller: _servingSizeCtrl,
-                            decoration: const InputDecoration(border: InputBorder.none, hintText: '100', hintStyle: TextStyle(color: Colors.grey, fontSize: 14)),
-                            keyboardType: TextInputType.number,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 1,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _servingUnit,
-                              isExpanded: true,
-                              items: ['g', 'ml', 'oz', 'cup'].map((String value) {
-                                return DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                );
-                              }).toList(),
-                              onChanged: (_) {},
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(child: _buildMacroInput('Kcal', _foodKcalCtrl)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _buildMacroInput('Prot (g)', _foodProtCtrl)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _buildMacroInput('Carb (g)', _foodCarbCtrl)),
-                      const SizedBox(width: 8),
-                      Expanded(child: _buildMacroInput('Fat (g)', _foodFatCtrl)),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => _saveNewFood(db),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6700),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Save to Library', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
             ),
             const SizedBox(height: 24), // padding for bottom nav
           ],
