@@ -66,9 +66,9 @@ A highly scalable sub-collection architecture containing food entries by users.
     * `timestamp`: Server timestamp for chronological sorting
 
 _**Architecture Scalability:**_
-_* Query Performance: By grouping entries under a specific `{date}` document, the app can calculate a day's total macros in a single sub-collection fetch._
-_* CRUD Operations: Each food entry is an independent document, allowing users to edit or delete specific items (using the `entryId`) without affecting other food item entries for that day._
-_* Data Integrity: Storing `consumedQuantity` alongside pro-rata macros ensures the app can re-calculate data immediately if the user edits this later._
+* _Query Performance: By grouping entries under a specific `{date}` document, the app can calculate a day's total macros in a single sub-collection fetch._
+* _CRUD Operations: Each food entry is an independent document, allowing users to edit or delete specific items (using the `entryId`) without affecting other food item entries for that day._
+* _Data Integrity: Storing `consumedQuantity` alongside pro-rata macros ensures the app can re-calculate data immediately if the user edits this later._
 
 ## 🎨 Design Philosophy
 The UI utilizes a high-contrast Orange (#ff6700) and Teal (#006666) color scheme on a pure white background to ensure maximum readability and a modern, professional aesthetic.
