@@ -21,6 +21,8 @@ class _LogScreenState extends State<LogScreen> {
   String get _dateStr => DateFormat('yyyy-MM-dd').format(_selectedDate);
 
   void _showAddFoodModal(BuildContext context, String mealType, String uid, FirestoreService db) {
+    String searchQuery = '';
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -29,80 +31,238 @@ class _LogScreenState extends State<LogScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.8,
-          maxChildSize: 0.95,
-          minChildSize: 0.5,
-          expand: false,
-          builder: (context, scrollController) {
-            return Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('Add to $mealType', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.8,
+              maxChildSize: 0.95,
+              minChildSize: 0.5,
+              expand: false,
+              builder: (context, scrollController) {
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Add to $mealType', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const TextField(
-                    decoration: InputDecoration(
-                      border: InputBorder.none,
-                      icon: Icon(Icons.search, color: Colors.grey),
-                      hintText: 'Search food database...',
-                      hintStyle: TextStyle(color: Colors.grey),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: StreamBuilder<QuerySnapshot>(
-                    stream: db.getFoods(),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
-                      
-                      final docs = snapshot.data!.docs;
-                      if (docs.isEmpty) return const Center(child: Text("No custom foods found. Add some in the Database!"));
-                      
-                      return ListView.builder(
-                        controller: scrollController,
-                        itemCount: docs.length,
-                        itemBuilder: (context, index) {
-                          var food = docs[index].data() as Map<String, dynamic>;
-                          return ListTile(
-                            title: Text(food['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text('${food['kcal']} kcal • ${food['protein']}p • ${food['carbs']}c • ${food['fat']}f'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.add_circle, color: Color(0xFFFF6700)),
-                              onPressed: () {
-                                db.addFoodToLog(uid, _dateStr, mealType, food);
-                                Navigator.pop(context);
-                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${food['name']} added to $mealType', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF006666)));
-                              },
-                            ),
+                    Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      child: TextField(
+                        onChanged: (val) => setModalState(() => searchQuery = val),
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          icon: Icon(Icons.search, color: Colors.grey),
+                          hintText: 'Search food database...',
+                          hintStyle: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Expanded(
+                      child: StreamBuilder<QuerySnapshot>(
+                        stream: db.getFoods(),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                          
+                          var docs = snapshot.data!.docs;
+                          
+                          if (searchQuery.isNotEmpty) {
+                            docs = docs.where((doc) {
+                              final data = doc.data() as Map<String, dynamic>;
+                              final name = (data['name'] ?? '').toString().toLowerCase();
+                              return name.contains(searchQuery.toLowerCase());
+                            }).toList();
+                          }
+                          
+                          if (docs.isEmpty) return const Center(child: Text("No custom foods found. Add some in the Database!"));
+                          
+                          return ListView.builder(
+                            controller: scrollController,
+                            itemCount: docs.length,
+                            itemBuilder: (context, index) {
+                              var food = docs[index].data() as Map<String, dynamic>;
+                              final size = food['servingSize'] ?? 100;
+                              final unit = food['servingUnit'] ?? 'g';
+                              
+                              return ListTile(
+                                title: Text(food['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text('${food['kcal']} kcal per $size$unit'),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.add_circle, color: Color(0xFFFF6700)),
+                                  onPressed: () {
+                                    _showQuantityDialog(context, mealType, uid, db, food, size, unit);
+                                  },
+                                ),
+                              );
+                            },
                           );
-                        },
-                      );
-                    }
-                  ),
-                ),
-              ],
+                        }
+                      ),
+                    ),
+                  ],
+                );
+              },
             );
-          },
+          }
         );
       },
+    );
+  }
+
+  void _showQuantityDialog(BuildContext parentContext, String mealType, String uid, FirestoreService db, Map<String, dynamic> food, num libSize, String libUnit) {
+    final qtyCtrl = TextEditingController();
+    
+    showDialog(
+      context: parentContext,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text('Add ${food['name']}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Base Serving: $libSize$libUnit'),
+              const SizedBox(height: 16),
+              const Text('Amount Consumed:'),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: qtyCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(border: OutlineInputBorder(), hintText: '0'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(libUnit),
+                ],
+              )
+            ]
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                final qty = num.tryParse(qtyCtrl.text) ?? 0;
+                if (qty <= 0) return;
+                
+                final multiplier = qty / libSize;
+                final kcal = ((food['kcal'] ?? 0) * multiplier);
+                final prot = ((food['protein'] ?? 0) * multiplier);
+                final carb = ((food['carbs'] ?? 0) * multiplier);
+                final fat = ((food['fat'] ?? 0) * multiplier);
+                
+                final entryData = {
+                  'mealType': mealType,
+                  'foodName': food['name'],
+                  'consumedQuantity': qty,
+                  'unit': libUnit,
+                  'kcal': kcal,
+                  'protein': prot,
+                  'carbs': carb,
+                  'fat': fat,
+                  'timestamp': FieldValue.serverTimestamp(),
+                };
+                
+                db.addFoodToLog(uid, _dateStr, mealType, entryData);
+                Navigator.pop(ctx);
+                Navigator.pop(parentContext);
+                ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(content: Text('${food['name']} added to $mealType', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF006666)));
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6700), foregroundColor: Colors.white),
+              child: const Text('Save to Log'),
+            )
+          ]
+        );
+      }
+    );
+  }
+
+  void _showEditQuantityDialog(BuildContext parentContext, String uid, FirestoreService db, Map<String, dynamic> loggedFood) {
+    final qtyCtrl = TextEditingController(text: loggedFood['consumedQuantity'].toString());
+    final oldQty = (loggedFood['consumedQuantity'] as num? ?? 1).toDouble();
+    if (oldQty == 0) return;
+
+    showDialog(
+      context: parentContext,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text('Edit ${loggedFood['foodName']}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Amount Consumed:'),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: qtyCtrl,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(border: OutlineInputBorder(), hintText: '0'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(loggedFood['unit'] ?? ''),
+                ],
+              )
+            ]
+          ),
+          actionsAlignment: MainAxisAlignment.spaceBetween,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.delete, color: Color(0xFF006666)),
+              onPressed: () {
+                db.deleteFoodFromLog(uid, _dateStr, loggedFood['docId']);
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(content: Text('${loggedFood['foodName']} deleted', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF006666)));
+              },
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    final newQty = num.tryParse(qtyCtrl.text) ?? 0;
+                    if (newQty <= 0) return;
+                    
+                    final multiplier = newQty / oldQty;
+                    
+                    final entryData = {
+                      'consumedQuantity': newQty,
+                      'kcal': (loggedFood['kcal'] ?? 0) * multiplier,
+                      'protein': (loggedFood['protein'] ?? 0) * multiplier,
+                      'carbs': (loggedFood['carbs'] ?? 0) * multiplier,
+                      'fat': (loggedFood['fat'] ?? 0) * multiplier,
+                    };
+                    
+                    db.updateFoodInLog(uid, _dateStr, loggedFood['docId'], entryData);
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(content: Text('${loggedFood['foodName']} updated', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF006666)));
+                  },
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6700), foregroundColor: Colors.white),
+                  child: const Text('Save to Log'),
+                ),
+              ],
+            ),
+          ]
+        );
+      }
     );
   }
 
@@ -154,16 +314,29 @@ class _LogScreenState extends State<LogScreen> {
         children: [
           if (_isCalendarExpanded) _buildCalendar(),
           Expanded(
-            child: StreamBuilder<DocumentSnapshot>(
-              stream: db.getDailyLog(user.uid, _dateStr),
+            child: StreamBuilder<QuerySnapshot>(
+              stream: db.getDailyLogEntries(user.uid, _dateStr),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                Map<String, dynamic> logData = {};
-                if (snapshot.hasData && snapshot.data!.exists) {
-                  logData = snapshot.data!.data() as Map<String, dynamic>;
+                Map<String, List<Map<String, dynamic>>> logData = {
+                  'Breakfast': [],
+                  'Lunch': [],
+                  'Dinner': [],
+                  'Snacks': [],
+                };
+
+                if (snapshot.hasData && snapshot.data != null) {
+                  for (var doc in snapshot.data!.docs) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    data['docId'] = doc.id;
+                    final meal = data['mealType'] as String?;
+                    if (meal != null && logData.containsKey(meal)) {
+                      logData[meal]!.add(data);
+                    }
+                  }
                 }
 
                 return ListView(
@@ -175,8 +348,7 @@ class _LogScreenState extends State<LogScreen> {
                       db: db,
                       icon: Icons.wb_sunny_outlined,
                       title: 'Breakfast',
-                      foods: List<Map<String, dynamic>>.from(logData['Breakfast'] ?? []),
-                      isExpanded: true,
+                      foods: logData['Breakfast']!,
                     ),
                     const SizedBox(height: 16),
                     _buildMealCategorySection(
@@ -185,7 +357,7 @@ class _LogScreenState extends State<LogScreen> {
                       db: db,
                       icon: Icons.restaurant,
                       title: 'Lunch',
-                      foods: List<Map<String, dynamic>>.from(logData['Lunch'] ?? []),
+                      foods: logData['Lunch']!,
                     ),
                     const SizedBox(height: 16),
                     _buildMealCategorySection(
@@ -194,7 +366,7 @@ class _LogScreenState extends State<LogScreen> {
                       db: db,
                       icon: Icons.nightlight_round,
                       title: 'Dinner',
-                      foods: List<Map<String, dynamic>>.from(logData['Dinner'] ?? []),
+                      foods: logData['Dinner']!,
                     ),
                     const SizedBox(height: 16),
                     _buildMealCategorySection(
@@ -203,7 +375,7 @@ class _LogScreenState extends State<LogScreen> {
                       db: db,
                       icon: Icons.fastfood_outlined,
                       title: 'Snacks',
-                      foods: List<Map<String, dynamic>>.from(logData['Snacks'] ?? []),
+                      foods: logData['Snacks']!,
                     ),
                   ],
                 );
@@ -211,11 +383,6 @@ class _LogScreenState extends State<LogScreen> {
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showAddFoodModal(context, 'Snacks', user.uid, db), // Defaulting FAB to snacks
-        backgroundColor: const Color(0xFFFF6700),
-        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -266,10 +433,15 @@ class _LogScreenState extends State<LogScreen> {
     int totalKcal = foods.fold(0, (sum, item) => sum + (item['kcal'] as num? ?? 0).toInt());
 
     List<Widget> logItems = foods.map((food) {
+      double p = (food['protein'] as num? ?? 0).toDouble();
+      double c = (food['carbs'] as num? ?? 0).toDouble();
+      double f = (food['fat'] as num? ?? 0).toDouble();
+      
       return _buildLogItem(
-        food['name'] ?? 'Unknown',
-        '${food['protein']}p • ${food['carbs']}c • ${food['fat']}f',
+        food['foodName'] ?? 'Unknown',
+        '${p.toStringAsFixed(1)}p • ${c.toStringAsFixed(1)}c • ${f.toStringAsFixed(1)}f',
         (food['kcal'] as num? ?? 0).toInt(),
+        () => _showEditQuantityDialog(context, uid, db, food),
       );
     }).toList();
 
@@ -342,21 +514,25 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
-  Widget _buildLogItem(String name, String details, int macros) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-              Text(details, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            ],
-          ),
-          Text('$macros kcal', style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
+  Widget _buildLogItem(String name, String details, int macros, VoidCallback onLongPress) {
+    return GestureDetector(
+      onLongPress: onLongPress,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
+                Text(details, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
+            Text('$macros kcal', style: const TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }

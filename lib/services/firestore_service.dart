@@ -91,14 +91,20 @@ class FirestoreService {
   }
 
   // Logs
-  Stream<DocumentSnapshot> getDailyLog(String uid, String dateStr) {
-    return _db.collection('logs').doc(uid).collection('dailyLogs').doc(dateStr).snapshots();
+  Stream<QuerySnapshot> getDailyLogEntries(String uid, String dateStr) {
+    return _db.collection('logs').doc(uid).collection('dailyLogs').doc(dateStr).collection('entries').orderBy('timestamp').snapshots();
   }
 
-  Future<void> addFoodToLog(String uid, String dateStr, String mealType, Map<String, dynamic> foodItem) {
-    return _db.collection('logs').doc(uid).collection('dailyLogs').doc(dateStr).set({
-      mealType: FieldValue.arrayUnion([foodItem])
-    }, SetOptions(merge: true));
+  Future<void> addFoodToLog(String uid, String dateStr, String mealType, Map<String, dynamic> entryData) {
+    return _db.collection('logs').doc(uid).collection('dailyLogs').doc(dateStr).collection('entries').add(entryData);
+  }
+
+  Future<void> updateFoodInLog(String uid, String dateStr, String docId, Map<String, dynamic> entryData) {
+    return _db.collection('logs').doc(uid).collection('dailyLogs').doc(dateStr).collection('entries').doc(docId).update(entryData);
+  }
+
+  Future<void> deleteFoodFromLog(String uid, String dateStr, String docId) {
+    return _db.collection('logs').doc(uid).collection('dailyLogs').doc(dateStr).collection('entries').doc(docId).delete();
   }
 }
 

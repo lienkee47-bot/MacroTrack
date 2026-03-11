@@ -66,8 +66,8 @@ class DashboardScreen extends StatelessWidget {
             StreamBuilder<DocumentSnapshot>(
               stream: db.getUserTargets(user.uid),
               builder: (context, targetSnap) {
-                return StreamBuilder<DocumentSnapshot>(
-                  stream: db.getDailyLog(user.uid, dateStr),
+                return StreamBuilder<QuerySnapshot>(
+                  stream: db.getDailyLogEntries(user.uid, dateStr),
                   builder: (context, logSnap) {
                     int targetKcal = 2000, targetProt = 150, targetCarb = 200, targetFat = 65;
                     int consKcal = 0, consProt = 0, consCarb = 0, consFat = 0;
@@ -81,17 +81,13 @@ class DashboardScreen extends StatelessWidget {
                       targetFat = (targets['fat'] as num? ?? 65).toInt();
                     }
 
-                    if (logSnap.hasData && logSnap.data!.exists) {
-                      var logData = logSnap.data!.data() as Map<String, dynamic>? ?? {};
-                      for (var meal in ['Breakfast', 'Lunch', 'Dinner', 'Snacks']) {
-                        if (logData[meal] != null) {
-                          for (var food in logData[meal]) {
-                            consKcal += (food['kcal'] as num? ?? 0).toInt();
-                            consProt += (food['protein'] as num? ?? 0).toInt();
-                            consCarb += (food['carbs'] as num? ?? 0).toInt();
-                            consFat += (food['fat'] as num? ?? 0).toInt();
-                          }
-                        }
+                    if (logSnap.hasData && logSnap.data != null) {
+                      for (var doc in logSnap.data!.docs) {
+                        var food = doc.data() as Map<String, dynamic>;
+                        consKcal += (food['kcal'] as num? ?? 0).toInt();
+                        consProt += (food['protein'] as num? ?? 0).toInt();
+                        consCarb += (food['carbs'] as num? ?? 0).toInt();
+                        consFat += (food['fat'] as num? ?? 0).toInt();
                       }
                     }
 
