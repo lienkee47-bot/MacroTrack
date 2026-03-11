@@ -51,6 +51,24 @@ A top-level collection containing standardized nutritional data entries for sear
     * `carbs`: Number (food's carbohydrates content in g)
     * `fat`: Number (food's fats content in g)
 
+#### 3. `logs` Collection
+A highly scalable sub-collection architecture containing food entries by users.
+* Path: `logs/{uid}/dailyLogs/{date}/entries/{entryId}`
+* Fields (`{entryId}`):
+    * `foodName`: String (name of food)
+    * `mealType`: String (which meal of the day - breakfast, lunch, dinner, or snacks)
+    * `consumedQuantity`: Number (actual quantity inputted by user)
+    * `unit`: String (unit of measurement, same as `servingUnit` in `foods` collection)
+    * `kcal`: Number (calculated pro rata based on `consumedQuantity`)
+    * `protein`: Number (calculated pro rata based on `consumedQuantity`)
+    * `carbs`: Number (calculated pro rata based on `consumedQuantity`)
+    * `fat`: Number (calculated pro rata based on `consumedQuantity`)
+    * `timestamp`: Server timestamp for chronological sorting
+_**Architecture Scalability:**_
+_* Query Performance: By grouping entries under a specific `{date}` document, the app can calculate a day's total macros in a single sub-collection fetch._
+_* CRUD Operations: Each food entry is an independent document, allowing users to edit or delete specific items (using the `entryId`) without affecting other food item entries for that day._
+_* Data Integrity: Storing `consumedQuantity` alongside pro-rata macros ensures the app can re-calculate data immediately if the user edits this later._
+
 ## 🎨 Design Philosophy
 The UI utilizes a high-contrast Orange (#ff6700) and Teal (#006666) color scheme on a pure white background to ensure maximum readability and a modern, professional aesthetic.
 
