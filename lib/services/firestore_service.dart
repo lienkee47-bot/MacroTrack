@@ -6,13 +6,13 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
-  // Food Library
-  Stream<QuerySnapshot> getFoods() {
-    return _db.collection('foods').snapshots();
+  // Food Library (private per user: foods/{uid}/userFoods/)
+  Stream<QuerySnapshot> getFoods(String uid) {
+    return _db.collection('foods').doc(uid).collection('userFoods').snapshots();
   }
 
-  Future<void> addFood(String name, num servingSize, String servingUnit, num kcal, num prot, num carb, num fat) {
-    return _db.collection('foods').add({
+  Future<void> addFood(String uid, String name, num servingSize, String servingUnit, num kcal, num prot, num carb, num fat) {
+    return _db.collection('foods').doc(uid).collection('userFoods').add({
       'name': name,
       'servingSize': servingSize,
       'servingUnit': servingUnit,
@@ -23,8 +23,8 @@ class FirestoreService {
     });
   }
 
-  Future<void> updateFood(String docId, String name, num servingSize, String servingUnit, num kcal, num prot, num carb, num fat) {
-    return _db.collection('foods').doc(docId).update({
+  Future<void> updateFood(String uid, String docId, String name, num servingSize, String servingUnit, num kcal, num prot, num carb, num fat) {
+    return _db.collection('foods').doc(uid).collection('userFoods').doc(docId).update({
       'name': name,
       'servingSize': servingSize,
       'servingUnit': servingUnit,
@@ -35,8 +35,34 @@ class FirestoreService {
     });
   }
 
-  Future<void> deleteFood(String docId) {
-    return _db.collection('foods').doc(docId).delete();
+  Future<void> deleteFood(String uid, String docId) {
+    return _db.collection('foods').doc(uid).collection('userFoods').doc(docId).delete();
+  }
+
+  /// One-time migration: copies root /foods docs into foods/{targetUid}/userFoods/
+  /// and deletes the originals. Hardcoded target UID per user request.
+  Future<int> migrateRootFoods() async {
+    const targetUid = 'L6CriapTlCYRjStlISL81IqEdWf2';
+    final rootFoods = await _db.collection('foods').get();
+    
+    // Filter only actual food documents (skip sub-collection parent docs)
+    final docsToMigrate = rootFoods.docs.where((doc) {
+      final data = doc.data();
+      return data.containsKey('name'); // real food docs have a 'name' field
+    }).toList();
+
+    if (docsToMigrate.isEmpty) return 0;
+
+    final batch = _db.batch();
+    for (var doc in docsToMigrate) {
+      // Copy to private path
+      final newRef = _db.collection('foods').doc(targetUid).collection('userFoods').doc();
+      batch.set(newRef, doc.data());
+      // Delete original
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
+    return docsToMigrate.length;
   }
 
   // Daily Targets & User Profiles

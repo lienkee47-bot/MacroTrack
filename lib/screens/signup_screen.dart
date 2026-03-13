@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -106,6 +107,20 @@ class _SignupScreenState extends State<SignupScreen> {
                   TextButton(
                     onPressed: widget.toggleView,
                     child: const Text('Already have an account? Sign In', style: TextStyle(color: Color(0xFFFF6700))),
+                  ),
+                  const SizedBox(height: 24),
+                  FutureBuilder<PackageInfo>(
+                    future: PackageInfo.fromPlatform(),
+                    builder: (context, snap) {
+                      if (!snap.hasData) return const SizedBox();
+                      return SafeArea(
+                        child: Text(
+                          'v${snap.data!.version}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11, color: Colors.grey.withValues(alpha: 0.5)),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),

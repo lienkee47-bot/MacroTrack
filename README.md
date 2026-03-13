@@ -40,8 +40,8 @@ Stores individual user profiles and daily target metrics.
         * `fat`: Number (fats intake in g)
 
 #### 2. `foods` Collection
-A top-level collection containing standardized nutritional data entries for search and selection, i.e. the Food Library.
-* Document ID: Auto-generated unique string.
+Each user maintains a private, isolated library of custom food items.
+* Path: `foods/{uid}/userFoods/{itemId}`
 * Fields:
     * `name`: String (name of food)
     * `servingSize`: Number (quantity of food)
@@ -80,6 +80,4 @@ The UI utilizes a high-contrast Orange (#ff6700) and Teal (#006666) color scheme
 ## 🚀 Future Roadmap
 * AI Integration: Implementing image recognition to log meals via camera snapshots.
 
-* Wearable Sync: Connecting with health APIs (Google Fit/Apple Health) for automated calorie expenditure tracking.
-
-* Sustainability Focus: Adding "Carbon Footprint" tracking for food items, aligning with my professional focus on climate change and sustainability.
+* Sustainability Focus: Adding "Carbon Footprint" tracking for food items.

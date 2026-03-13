@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/firestore_service.dart';
 
 class DatabaseScreen extends StatefulWidget {
@@ -45,6 +46,23 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     super.dispose();
   }
 
+  Future<void> _runMigrationOnce(FirestoreService db) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('foods_migrated') == true) return;
+
+    final count = await db.migrateRootFoods();
+    await prefs.setBool('foods_migrated', true);
+
+    if (count > 0 && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Migrated $count food(s) to your private library.', style: const TextStyle(color: Colors.white)),
+          backgroundColor: const Color(0xFF006666),
+        ),
+      );
+    }
+  }
+
   void _saveTargets(String uid, FirestoreService db) {
     final kcal = num.tryParse(_kcalTargetCtrl.text) ?? 2000;
     final protein = num.tryParse(_protTargetCtrl.text) ?? 150;
@@ -64,7 +82,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Targets Saved', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
   }
 
-  void _saveFood(FirestoreService db, {String? docId}) {
+  void _saveFood(FirestoreService db, String uid, {String? docId}) {
     if (_foodNameCtrl.text.isEmpty) return;
     
     final name = _foodNameCtrl.text;
@@ -75,10 +93,10 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     final fat = num.tryParse(_foodFatCtrl.text) ?? 0;
 
     if (docId == null) {
-      db.addFood(name, size, _servingUnit, kcal, prot, carb, fat);
+      db.addFood(uid, name, size, _servingUnit, kcal, prot, carb, fat);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Added to Library', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
     } else {
-      db.updateFood(docId, name, size, _servingUnit, kcal, prot, carb, fat);
+      db.updateFood(uid, docId, name, size, _servingUnit, kcal, prot, carb, fat);
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Updated', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
     }
 
@@ -91,8 +109,8 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     Navigator.pop(context);
   }
 
-  void _deleteFood(FirestoreService db, String docId) {
-    db.deleteFood(docId);
+  void _deleteFood(FirestoreService db, String uid, String docId) {
+    db.deleteFood(uid, docId);
     _foodNameCtrl.clear();
     _servingSizeCtrl.text = '100';
     _foodKcalCtrl.clear();
@@ -103,7 +121,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Deleted', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
   }
 
-  void _showAddFoodModal(FirestoreService db, {String? docId, Map<String, dynamic>? existingData}) {
+  void _showAddFoodModal(FirestoreService db, String uid, {String? docId, Map<String, dynamic>? existingData}) {
     if (existingData != null) {
       _foodNameCtrl.text = existingData['name']?.toString() ?? '';
       _servingSizeCtrl.text = existingData['servingSize']?.toString() ?? '100';
@@ -220,7 +238,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () => _saveFood(db),
+                          onPressed: () => _saveFood(db, uid),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFF6700),
                             foregroundColor: Colors.white,
@@ -236,7 +254,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                           Expanded(
                             flex: 1,
                             child: ElevatedButton(
-                              onPressed: () => _deleteFood(db, docId),
+                              onPressed: () => _deleteFood(db, uid, docId),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF006666),
                                 foregroundColor: Colors.white,
@@ -250,7 +268,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                           Expanded(
                             flex: 3,
                             child: ElevatedButton(
-                              onPressed: () => _saveFood(db, docId: docId),
+                              onPressed: () => _saveFood(db, uid, docId: docId),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFFF6700),
                                 foregroundColor: Colors.white,
@@ -279,6 +297,9 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     final db = Provider.of<FirestoreService>(context, listen: false);
 
     if (user == null) return const Center(child: Text('Please log in'));
+
+    // One-time migration of root /foods to private sub-collection (persisted)
+    _runMigrationOnce(db);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -371,7 +392,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () => _showAddFoodModal(db),
+                  onPressed: () => _showAddFoodModal(db, user.uid),
                   icon: const Icon(Icons.add, size: 16, color: Colors.white),
                   label: const Text('New', style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
@@ -404,7 +425,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
             ),
             const SizedBox(height: 16),
             StreamBuilder<QuerySnapshot>(
-              stream: db.getFoods(),
+               stream: db.getFoods(user.uid),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 
@@ -431,7 +452,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                     final kcal = food['kcal'] ?? 0;
                     
                     return GestureDetector(
-                      onLongPress: () => _showAddFoodModal(db, docId: docs[index].id, existingData: food),
+                      onLongPress: () => _showAddFoodModal(db, user.uid, docId: docs[index].id, existingData: food),
                       child: _buildFoodLibraryItem(
                         food['name'] ?? 'Unknown',
                         '$kcal kcal per $size$unit',

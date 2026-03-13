@@ -74,7 +74,7 @@ class _LogScreenState extends State<LogScreen> {
                     const SizedBox(height: 16),
                     Expanded(
                       child: StreamBuilder<QuerySnapshot>(
-                        stream: db.getFoods(),
+                        stream: db.getFoods(uid),
                         builder: (context, snapshot) {
                           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                           
@@ -303,12 +303,6 @@ class _LogScreenState extends State<LogScreen> {
             ],
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Column(
         children: [

@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -247,6 +248,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       side: BorderSide(color: Colors.grey[300]!),
                     ),
                   ),
+                ),
+                const SizedBox(height: 24),
+                FutureBuilder<PackageInfo>(
+                  future: PackageInfo.fromPlatform(),
+                  builder: (context, snap) {
+                    if (!snap.hasData) return const SizedBox();
+                    return Text(
+                      'v${snap.data!.version}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF006666)),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
               ],

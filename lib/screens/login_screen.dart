@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../services/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -95,6 +96,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextButton(
                     onPressed: widget.toggleView,
                     child: const Text('Need an account? Register', style: TextStyle(color: Color(0xFF006666))),
+                  ),
+                  const SizedBox(height: 24),
+                  FutureBuilder<PackageInfo>(
+                    future: PackageInfo.fromPlatform(),
+                    builder: (context, snap) {
+                      if (!snap.hasData) return const SizedBox();
+                      return SafeArea(
+                        child: Text(
+                          'v${snap.data!.version}',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 11, color: Colors.grey.withValues(alpha: 0.5)),
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
