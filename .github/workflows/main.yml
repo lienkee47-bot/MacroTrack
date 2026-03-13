@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4 # Updated from v3
 
       - name: Setup Java
-        uses: actions/setup-java@v4 # Updated from v3
+        uses: actions/setup-java@v5 # Updated from v3
         with:
           distribution: 'zulu'
           java-version: '17'
