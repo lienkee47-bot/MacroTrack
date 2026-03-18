@@ -514,14 +514,17 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(calInfo, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text(calInfo, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
           ),
+          const SizedBox(width: 12),
           Row(
             children: [
               _buildMacroChip(p, Colors.grey[200]!),

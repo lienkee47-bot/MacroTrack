@@ -20,6 +20,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final List<StreamSubscription> _subscriptions = [];
   String _pieChartFilter = 'kcal';
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 4 && hour <= 11) return 'Good morning';
+    if (hour >= 12 && hour <= 18) return 'Good afternoon';
+    return 'Good evening';
+  }
+
   @override
   void initState() {
     super.initState();
@@ -96,7 +103,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Good morning, $userName',
+                      '${_getGreeting()}, $userName',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
@@ -246,7 +253,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   Text(
-                    'of $targetKcal kcal goal',
+                    '$consumedKcal kcal / $targetKcal kcal',
                     style: const TextStyle(color: Colors.grey, fontSize: 12),
                   ),
                 ],
@@ -324,6 +331,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         spots.add(FlSpot(i.toDouble(), dailyKcal));
     }
 
+    // Add extra headroom for data labels above the highest point
+    maxY += 300;
+
     return Container(
       height: 230,
       padding: const EdgeInsets.only(top: 16, right: 20, left: 10, bottom: 10),
@@ -400,6 +410,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 interval: 1000,
                 reservedSize: 28,
                 getTitlesWidget: (value, meta) {
+                  if (value % 1000 != 0) return const SizedBox();
                   return Text(
                     '${(value / 1000).toInt()}k',
                     style: const TextStyle(color: Colors.grey, fontSize: 10),
@@ -423,6 +434,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
           ],
+          lineTouchData: LineTouchData(
+            enabled: false,
+            handleBuiltInTouches: false,
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (_) => Colors.transparent,
+              tooltipPadding: EdgeInsets.zero,
+              tooltipMargin: 6,
+              getTooltipItems: (touchedSpots) {
+                return touchedSpots.map((spot) {
+                  return LineTooltipItem(
+                    spot.y.toStringAsFixed(1),
+                    const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF006666),
+                    ),
+                  );
+                }).toList();
+              },
+            ),
+          ),
+          showingTooltipIndicators: spots.asMap().entries.map((e) {
+            return ShowingTooltipIndicators([
+              LineBarSpot(
+                LineChartBarData(spots: spots),
+                0,
+                spots[e.key],
+              ),
+            ]);
+          }).toList(),
         ),
       ),
           ),
