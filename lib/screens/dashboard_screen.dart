@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -68,6 +69,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget build(BuildContext context) {
     final user = Provider.of<User?>(context);
     final db = Provider.of<FirestoreService>(context, listen: false);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     if (user == null) {
       return const Center(child: Text("Please log in"));
@@ -78,10 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String dateStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         toolbarHeight: 80,
         title: StreamBuilder<DocumentSnapshot>(
           stream: db.getUserProfile(user.uid),
@@ -171,6 +171,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       targetProt: targetProt, consumedProt: consProt,
                       targetCarb: targetCarb, consumedCarb: consCarb,
                       targetFat: targetFat, consumedFat: consFat,
+                      isDark: isDark,
                     ),
                     const SizedBox(height: 24),
                     const Text(
@@ -183,11 +184,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    _buildTrendCard(targetKcal),
+                    _buildTrendCard(targetKcal, isDark),
                     const SizedBox(height: 24),
                     Row(
                       children: [
-                        Expanded(child: _buildDistributionCard()),
+                        Expanded(child: _buildDistributionCard(isDark)),
                       ],
                     ),
                   ],
@@ -205,17 +206,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required int targetProt, required int consumedProt,
     required int targetCarb, required int consumedCarb,
     required int targetFat, required int consumedFat,
+    required bool isDark,
   }) {
     int leftKcal = targetKcal - consumedKcal;
     double progress = targetKcal > 0 ? consumedKcal / targetKcal : 0;
     progress = progress.clamp(0.0, 1.0);
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final mainTextColor = isDark ? Colors.white : Colors.black;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
+        boxShadow: isDark ? [] : [
           BoxShadow(
             color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
@@ -239,7 +243,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: leftKcal < 0 ? Colors.red : Colors.black,
+                            color: leftKcal < 0 ? Colors.red : mainTextColor,
                           ),
                         ),
                         TextSpan(
@@ -266,13 +270,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     CircularProgressIndicator(
                       value: progress,
-                      backgroundColor: Colors.grey[200],
-                      color: const Color(0xFF006666),
+                      backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                      color: isDark ? AppTheme.darkTeal : AppTheme.primaryTeal,
                       strokeWidth: 8,
                     ),
                     const Center(
                       child: Icon(Icons.local_fire_department,
-                          color: Color(0xFFFF6700)),
+                          color: AppTheme.primaryOrange),
                     ),
                   ],
                 ),
@@ -280,17 +284,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 24),
-          _buildMacroBar('Protein', consumedProt, targetProt, const Color(0xFFFF6700)),
+          _buildMacroBar('Protein', consumedProt, targetProt, AppTheme.primaryOrange, isDark),
           const SizedBox(height: 12),
-          _buildMacroBar('Carbs', consumedCarb, targetCarb, const Color(0xFF006666)),
+          _buildMacroBar('Carbs', consumedCarb, targetCarb, isDark ? AppTheme.darkTeal : AppTheme.primaryTeal, isDark),
           const SizedBox(height: 12),
-          _buildMacroBar('Fats', consumedFat, targetFat, Colors.amber),
+          _buildMacroBar('Fats', consumedFat, targetFat, Colors.amber, isDark),
         ],
       ),
     );
   }
 
-  Widget _buildMacroBar(String label, int current, int total, Color color) {
+  Widget _buildMacroBar(String label, int current, int total, Color color, bool isDark) {
     double progress = total > 0 ? current / total : 0;
     progress = progress.clamp(0.0, 1.0);
     return Column(
@@ -307,7 +311,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 8),
         LinearProgressIndicator(
           value: progress,
-          backgroundColor: Colors.grey[200],
+          backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
           color: color,
           minHeight: 8,
           borderRadius: BorderRadius.circular(4),
@@ -316,7 +320,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildTrendCard(int targetKcal) {
+  Widget _buildTrendCard(int targetKcal, bool isDark) {
     List<FlSpot> spots = [];
     double maxY = targetKcal.toDouble() + 500;
     
@@ -331,16 +335,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         spots.add(FlSpot(i.toDouble(), dailyKcal));
     }
 
-    // Add extra headroom for data labels above the highest point
     maxY += 300;
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final tealColor = isDark ? AppTheme.darkTeal : AppTheme.primaryTeal;
 
     return Container(
       height: 230,
       padding: const EdgeInsets.only(top: 16, right: 20, left: 10, bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
+        boxShadow: isDark ? [] : [
           BoxShadow(
             color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
@@ -377,7 +382,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             horizontalLines: [
               HorizontalLine(
                 y: targetKcal.toDouble(),
-                color: const Color(0xFFFF6700),
+                color: AppTheme.primaryOrange,
                 strokeWidth: 2,
                 dashArray: [5, 5],
               ),
@@ -424,13 +429,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             LineChartBarData(
               spots: spots,
               isCurved: true,
-              color: const Color(0xFF006666),
+              color: tealColor,
               barWidth: 3,
               isStrokeCapRound: true,
               dotData: const FlDotData(show: true),
               belowBarData: BarAreaData(
                 show: true,
-                color: const Color(0xFFb2d8d8).withValues(alpha: 0.4),
+                color: tealColor.withValues(alpha: 0.2),
               ),
             ),
           ],
@@ -445,10 +450,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 return touchedSpots.map((spot) {
                   return LineTooltipItem(
                     spot.y.toStringAsFixed(1),
-                    const TextStyle(
+                    TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF006666),
+                      color: tealColor,
                     ),
                   );
                 }).toList();
@@ -472,7 +477,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildDistributionCard() {
+  Widget _buildDistributionCard(bool isDark) {
     Map<String, double> totals = {
       'Breakfast': 0,
       'Lunch': 0,
@@ -498,22 +503,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     double dPct = totalMetric > 0 ? (totals['Dinner']! / totalMetric) * 100 : 0;
     double sPct = totalMetric > 0 ? (totals['Snacks']! / totalMetric) * 100 : 0;
 
+    final tealColor = isDark ? AppTheme.darkTeal : AppTheme.primaryTeal;
+    final labelColor = isDark ? Colors.white : Colors.black;
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+
     List<PieChartSectionData> sections = [];
     if (totalMetric == 0) {
-      sections = [PieChartSectionData(color: Colors.grey[200]!, value: 100, title: '', radius: 16)];
+      sections = [PieChartSectionData(color: isDark ? Colors.grey[800]! : Colors.grey[200]!, value: 100, title: '', radius: 16)];
     } else {
-      if (bPct > 0) sections.add(PieChartSectionData(color: const Color(0xFFFF6700), value: bPct, title: '${bPct.toInt()}%', radius: 16, titlePositionPercentageOffset: 2.2, titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black)));
-      if (lPct > 0) sections.add(PieChartSectionData(color: const Color(0xFFFFC100), value: lPct, title: '${lPct.toInt()}%', radius: 16, titlePositionPercentageOffset: 2.2, titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black)));
-      if (dPct > 0) sections.add(PieChartSectionData(color: const Color(0xFF006666), value: dPct, title: '${dPct.toInt()}%', radius: 16, titlePositionPercentageOffset: 2.2, titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black)));
-      if (sPct > 0) sections.add(PieChartSectionData(color: const Color(0xFFb2d8d8), value: sPct, title: '${sPct.toInt()}%', radius: 16, titlePositionPercentageOffset: 2.2, titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.black)));
+      if (bPct > 0) sections.add(PieChartSectionData(color: AppTheme.primaryOrange, value: bPct, title: '${bPct.toInt()}%', radius: 16, titlePositionPercentageOffset: 2.2, titleStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: labelColor)));
+      if (lPct > 0) sections.add(PieChartSectionData(color: const Color(0xFFFFC100), value: lPct, title: '${lPct.toInt()}%', radius: 16, titlePositionPercentageOffset: 2.2, titleStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: labelColor)));
+      if (dPct > 0) sections.add(PieChartSectionData(color: tealColor, value: dPct, title: '${dPct.toInt()}%', radius: 16, titlePositionPercentageOffset: 2.2, titleStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: labelColor)));
+      if (sPct > 0) sections.add(PieChartSectionData(color: const Color(0xFFb2d8d8), value: sPct, title: '${sPct.toInt()}%', radius: 16, titlePositionPercentageOffset: 2.2, titleStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: labelColor)));
     }
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
+        boxShadow: isDark ? [] : [
           BoxShadow(
             color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
@@ -539,7 +548,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFF6700),
+                  color: AppTheme.primaryOrange,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: DropdownButton<String>(
@@ -547,7 +556,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   icon: const Icon(Icons.arrow_drop_down, color: Colors.white, size: 16),
                   underline: const SizedBox(),
                   isDense: true,
-                  dropdownColor: Colors.white,
+                  dropdownColor: isDark ? AppTheme.darkSurface : Colors.white,
                   selectedItemBuilder: (BuildContext context) {
                     return [
                       {'value': 'kcal', 'label': 'Kcal'},
@@ -563,11 +572,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       );
                     }).toList();
                   },
-                  items: const [
-                    DropdownMenuItem(value: 'kcal', child: Text('Kcal', style: TextStyle(color: Colors.black87, fontSize: 12))),
-                    DropdownMenuItem(value: 'protein', child: Text('Protein', style: TextStyle(color: Colors.black87, fontSize: 12))),
-                    DropdownMenuItem(value: 'carbs', child: Text('Carbs', style: TextStyle(color: Colors.black87, fontSize: 12))),
-                    DropdownMenuItem(value: 'fat', child: Text('Fat', style: TextStyle(color: Colors.black87, fontSize: 12))),
+                  items: [
+                    DropdownMenuItem(value: 'kcal', child: Text('Kcal', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 12))),
+                    DropdownMenuItem(value: 'protein', child: Text('Protein', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 12))),
+                    DropdownMenuItem(value: 'carbs', child: Text('Carbs', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 12))),
+                    DropdownMenuItem(value: 'fat', child: Text('Fat', style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 12))),
                   ],
                   onChanged: (val) {
                     if (val != null) {
@@ -595,16 +604,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 24),
-          const Center(
+          Center(
             child: Wrap(
               alignment: WrapAlignment.center,
               spacing: 12,
               runSpacing: 8,
               children: [
-                 _LegendItem(color: Color(0xFFFF6700), label: 'Breakfast'),
-                 _LegendItem(color: Color(0xFFFFC100), label: 'Lunch'),
-                 _LegendItem(color: Color(0xFF006666), label: 'Dinner'),
-                 _LegendItem(color: Color(0xFFb2d8d8), label: 'Snacks'),
+                 _LegendItem(color: AppTheme.primaryOrange, label: 'Breakfast'),
+                 _LegendItem(color: const Color(0xFFFFC100), label: 'Lunch'),
+                 _LegendItem(color: tealColor, label: 'Dinner'),
+                 _LegendItem(color: const Color(0xFFb2d8d8), label: 'Snacks'),
               ],
             ),
           ),

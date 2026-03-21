@@ -6,6 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import '../providers/theme_provider.dart';
+import '../theme/app_theme.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -47,7 +49,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         
         if (url != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile picture updated'), backgroundColor: Color(0xFF006666)),
+            const SnackBar(content: Text('Profile picture updated'), backgroundColor: AppTheme.primaryTeal),
           );
         }
       } catch (e) {
@@ -95,14 +97,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   db.updateUserField(uid, {fieldName: finalVal});
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('$title updated'), backgroundColor: const Color(0xFF006666)),
+                    SnackBar(content: Text('$title updated'), backgroundColor: AppTheme.primaryTeal),
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFF6700),
+                  backgroundColor: AppTheme.primaryOrange,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ), // Updated padding
+                ),
                 child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
               ),
               const SizedBox(height: 24),
@@ -116,7 +118,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _resetPassword(String email) {
     AuthService().sendPasswordReset(email);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Password reset email sent'), backgroundColor: Color(0xFF006666)),
+      const SnackBar(content: Text('Password reset email sent'), backgroundColor: AppTheme.primaryTeal),
     );
   }
 
@@ -124,17 +126,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final user = Provider.of<User?>(context);
     final db = Provider.of<FirestoreService>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+    final theme = Theme.of(context);
 
     if (user == null || !_streamInitialized) {
       return const Center(child: Text("Please log in"));
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         title: const Text('My Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+        actions: [
+          // ── Dark/Light mode toggle ───────────────────────
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+              icon: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                transitionBuilder: (child, anim) => RotationTransition(turns: anim, child: child),
+                child: Icon(
+                  isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                  key: ValueKey(isDark),
+                  color: isDark ? Colors.amber : Colors.grey.shade700,
+                ),
+              ),
+              onPressed: () => themeProvider.toggleTheme(),
+            ),
+          ),
+        ],
       ),
       body: StreamBuilder<DocumentSnapshot>(
         stream: _profileStream,
@@ -166,6 +187,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           final bool hasValidImage = photoUrl != null && photoUrl.toString().trim().isNotEmpty;
 
+          // Theme-aware colors for tiles
+          final tileColor = isDark ? AppTheme.darkCard : Colors.grey[50];
+          final tileTextColor = theme.textTheme.bodyLarge?.color ?? (isDark ? Colors.white : Colors.black87);
+          final secondaryTextColor = isDark ? Colors.grey.shade400 : Colors.grey;
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -177,9 +203,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Container(
                           width: 100,
                           height: 100,
-                          color: const Color(0xFFF5E6CC),
+                          color: isDark ? AppTheme.darkSurface : const Color(0xFFF5E6CC),
                           child: _isUploading
-                              ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF6700)))
+                              ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryOrange))
                               : hasValidImage
                                   ? Image.network(
                                       photoUrl.toString(),
@@ -197,7 +223,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: const BoxDecoration(
-                              color: Color(0xFFFF6700),
+                              color: AppTheme.primaryOrange,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(Icons.add_a_photo, color: Colors.white, size: 16),
@@ -208,28 +234,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Text(name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Text(name, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: tileTextColor)),
                 const SizedBox(height: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF0E6),
+                    color: isDark ? AppTheme.primaryOrange.withValues(alpha: 0.15) : const Color(0xFFFFF0E6),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Text('Pro Member', style: TextStyle(color: Color(0xFFFF6700), fontSize: 12, fontWeight: FontWeight.w600)),
+                  child: const Text('Pro Member', style: TextStyle(color: AppTheme.primaryOrange, fontSize: 12, fontWeight: FontWeight.w600)),
                 ),
                 const SizedBox(height: 32),
                 
-                _buildSectionHeader(Icons.insert_chart_outlined, 'Personal Stats'),
-                _buildActionTile('Age', '$age', () => _showEditSheet(user.uid, db, 'personalStats.age', 'Age', age, true)),
-                _buildActionTile('Weight', weightStr, () => _showEditSheet(user.uid, db, 'personalStats.weight', 'Weight', weight, true, hintText: 'kg')),
-                _buildActionTile('Height', heightStr, () => _showEditSheet(user.uid, db, 'personalStats.height', 'Height', height, true, hintText: 'cm')),
+                _buildSectionHeader(Icons.insert_chart_outlined, 'Personal Stats', secondaryTextColor, tileTextColor),
+                _buildActionTile('Age', '$age', () => _showEditSheet(user.uid, db, 'personalStats.age', 'Age', age, true), tileColor!, tileTextColor),
+                _buildActionTile('Weight', weightStr, () => _showEditSheet(user.uid, db, 'personalStats.weight', 'Weight', weight, true, hintText: 'kg'), tileColor, tileTextColor),
+                _buildActionTile('Height', heightStr, () => _showEditSheet(user.uid, db, 'personalStats.height', 'Height', height, true, hintText: 'cm'), tileColor, tileTextColor),
 
                 
                 const SizedBox(height: 32),
-                _buildSectionHeader(Icons.security, 'Account'),
-                _buildInfoTile('Email', email),
-                _buildActionTile('Password', '********', () => _resetPassword(email)),
+                _buildSectionHeader(Icons.security, 'Account', secondaryTextColor, tileTextColor),
+                _buildInfoTile('Email', email, tileColor, tileTextColor, secondaryTextColor),
+                _buildActionTile('Password', '********', () => _resetPassword(email), tileColor, tileTextColor),
                 
                 const SizedBox(height: 32),
                 SizedBox(
@@ -238,14 +264,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onPressed: () async {
                       await AuthService().signOut();
                     },
-                    icon: const Icon(Icons.logout, color: Colors.grey),
-                    label: const Text('Log Out', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.bold)),
+                    icon: Icon(Icons.logout, color: secondaryTextColor),
+                    label: Text('Log Out', style: TextStyle(color: tileTextColor.withValues(alpha: 0.7), fontWeight: FontWeight.bold)),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      side: BorderSide(color: Colors.grey[300]!),
+                      side: BorderSide(color: isDark ? Colors.grey.shade700 : Colors.grey[300]!),
                     ),
                   ),
                 ),
@@ -257,7 +283,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     return Text(
                       'v${snap.data!.version}',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF006666)),
+                      style: TextStyle(fontSize: 11, color: isDark ? AppTheme.darkTeal : AppTheme.primaryTeal),
                     );
                   },
                 ),
@@ -270,38 +296,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildSectionHeader(IconData icon, String title) {
+  Widget _buildSectionHeader(IconData icon, String title, Color iconColor, Color textColor) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         children: [
-          Icon(icon, color: Colors.grey, size: 20),
+          Icon(icon, color: iconColor, size: 20),
           const SizedBox(width: 8),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: textColor)),
         ],
       ),
     );
   }
 
-  Widget _buildInfoTile(String title, String trailing) {
+  Widget _buildInfoTile(String title, String trailing, Color bgColor, Color textColor, Color trailingColor) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: bgColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(color: Colors.black87)),
-          Text(trailing, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+          Text(title, style: TextStyle(color: textColor)),
+          Text(trailing, style: TextStyle(fontWeight: FontWeight.bold, color: trailingColor)),
         ],
       ),
     );
   }
 
-  Widget _buildActionTile(String title, String trailing, VoidCallback onTap) {
+  Widget _buildActionTile(String title, String trailing, VoidCallback onTap, Color bgColor, Color textColor) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -309,13 +335,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.grey[50],
+          color: bgColor,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(title, style: const TextStyle(color: Colors.black87)),
+            Text(title, style: TextStyle(color: textColor)),
             Row(
               children: [
                 Text(trailing, style: const TextStyle(fontWeight: FontWeight.bold)),

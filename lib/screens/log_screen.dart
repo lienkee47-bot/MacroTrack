@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
 
 class LogScreen extends StatefulWidget {
   const LogScreen({super.key});
@@ -22,11 +23,12 @@ class _LogScreenState extends State<LogScreen> {
 
   void _showAddFoodModal(BuildContext context, String mealType, String uid, FirestoreService db) {
     String searchQuery = '';
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? AppTheme.darkSurface : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -58,7 +60,7 @@ class _LogScreenState extends State<LogScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 16),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       decoration: BoxDecoration(
-                        color: Colors.grey[100],
+                        color: isDark ? AppTheme.darkCard : Colors.grey[100],
                         borderRadius: BorderRadius.circular(24),
                       ),
                       child: TextField(
@@ -102,7 +104,7 @@ class _LogScreenState extends State<LogScreen> {
                                 title: Text(food['name'] ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.bold)),
                                 subtitle: Text('${food['kcal']} kcal per $size$unit'),
                                 trailing: IconButton(
-                                  icon: const Icon(Icons.add_circle, color: Color(0xFFFF6700)),
+                                  icon: const Icon(Icons.add_circle, color: AppTheme.primaryOrange),
                                   onPressed: () {
                                     _showQuantityDialog(context, mealType, uid, db, food, size, unit);
                                   },
@@ -181,9 +183,9 @@ class _LogScreenState extends State<LogScreen> {
                 db.addFoodToLog(uid, _dateStr, mealType, entryData);
                 Navigator.pop(ctx);
                 Navigator.pop(parentContext);
-                ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(content: Text('${food['name']} added to $mealType', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF006666)));
+                ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(content: Text('${food['name']} added to $mealType', style: const TextStyle(color: Colors.white)), backgroundColor: AppTheme.primaryTeal));
               },
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6700), foregroundColor: Colors.white),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryOrange, foregroundColor: Colors.white),
               child: const Text('Save to Log'),
             )
           ]
@@ -226,11 +228,11 @@ class _LogScreenState extends State<LogScreen> {
           actionsAlignment: MainAxisAlignment.spaceBetween,
           actions: [
             IconButton(
-              icon: const Icon(Icons.delete, color: Color(0xFF006666)),
+              icon: Icon(Icons.delete, color: Theme.of(parentContext).brightness == Brightness.dark ? AppTheme.darkTeal : AppTheme.primaryTeal),
               onPressed: () {
                 db.deleteFoodFromLog(uid, _dateStr, loggedFood['docId']);
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(content: Text('${loggedFood['foodName']} deleted', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF006666)));
+                ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(content: Text('${loggedFood['foodName']} deleted', style: const TextStyle(color: Colors.white)), backgroundColor: AppTheme.primaryTeal));
               },
             ),
             Row(
@@ -253,9 +255,9 @@ class _LogScreenState extends State<LogScreen> {
                     
                     db.updateFoodInLog(uid, _dateStr, loggedFood['docId'], entryData);
                     Navigator.pop(ctx);
-                    ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(content: Text('${loggedFood['foodName']} updated', style: const TextStyle(color: Colors.white)), backgroundColor: const Color(0xFF006666)));
+                    ScaffoldMessenger.of(parentContext).showSnackBar(SnackBar(content: Text('${loggedFood['foodName']} updated', style: const TextStyle(color: Colors.white)), backgroundColor: AppTheme.primaryTeal));
                   },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6700), foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryOrange, foregroundColor: Colors.white),
                   child: const Text('Save to Log'),
                 ),
               ],
@@ -270,14 +272,12 @@ class _LogScreenState extends State<LogScreen> {
   Widget build(BuildContext context) {
     final user = Provider.of<User?>(context);
     final db = Provider.of<FirestoreService>(context, listen: false);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (user == null) return const Center(child: Text('Please log in'));
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         title: InkWell(
           onTap: () {
             setState(() {
@@ -306,7 +306,7 @@ class _LogScreenState extends State<LogScreen> {
       ),
       body: Column(
         children: [
-          if (_isCalendarExpanded) _buildCalendar(),
+          if (_isCalendarExpanded) _buildCalendar(isDark),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: db.getDailyLogEntries(user.uid, _dateStr),
@@ -343,6 +343,7 @@ class _LogScreenState extends State<LogScreen> {
                       icon: Icons.wb_sunny_outlined,
                       title: 'Breakfast',
                       foods: logData['Breakfast']!,
+                      isDark: isDark,
                     ),
                     const SizedBox(height: 16),
                     _buildMealCategorySection(
@@ -352,6 +353,7 @@ class _LogScreenState extends State<LogScreen> {
                       icon: Icons.restaurant,
                       title: 'Lunch',
                       foods: logData['Lunch']!,
+                      isDark: isDark,
                     ),
                     const SizedBox(height: 16),
                     _buildMealCategorySection(
@@ -361,6 +363,7 @@ class _LogScreenState extends State<LogScreen> {
                       icon: Icons.nightlight_round,
                       title: 'Dinner',
                       foods: logData['Dinner']!,
+                      isDark: isDark,
                     ),
                     const SizedBox(height: 16),
                     _buildMealCategorySection(
@@ -370,6 +373,7 @@ class _LogScreenState extends State<LogScreen> {
                       icon: Icons.fastfood_outlined,
                       title: 'Snacks',
                       foods: logData['Snacks']!,
+                      isDark: isDark,
                     ),
                   ],
                 );
@@ -381,9 +385,9 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 
-  Widget _buildCalendar() {
+  Widget _buildCalendar(bool isDark) {
     return Container(
-      color: Colors.white,
+      color: isDark ? AppTheme.darkSurface : Colors.white,
       child: TableCalendar(
         firstDay: DateTime.utc(2020, 1, 1),
         lastDay: DateTime.utc(2030, 12, 31),
@@ -401,13 +405,13 @@ class _LogScreenState extends State<LogScreen> {
           formatButtonVisible: false,
           titleCentered: true,
         ),
-        calendarStyle: const CalendarStyle(
-          selectedDecoration: BoxDecoration(
-            color: Color(0xFFFF6700),
+        calendarStyle: CalendarStyle(
+          selectedDecoration: const BoxDecoration(
+            color: AppTheme.primaryOrange,
             shape: BoxShape.circle,
           ),
           todayDecoration: BoxDecoration(
-            color: Color(0xFF006666),
+            color: isDark ? AppTheme.darkTeal : AppTheme.primaryTeal,
             shape: BoxShape.circle,
           ),
         ),
@@ -422,9 +426,11 @@ class _LogScreenState extends State<LogScreen> {
     required IconData icon,
     required String title,
     required List<Map<String, dynamic>> foods,
+    required bool isDark,
     bool isExpanded = false,
   }) {
-    int totalKcal = foods.fold(0, (sum, item) => sum + (item['kcal'] as num? ?? 0).toInt());
+    int totalKcal = foods.fold(0, (acc, item) => acc + (item['kcal'] as num? ?? 0).toInt());
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
 
     List<Widget> logItems = foods.map((food) {
       double p = (food['protein'] as num? ?? 0).toDouble();
@@ -441,9 +447,9 @@ class _LogScreenState extends State<LogScreen> {
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
+        boxShadow: isDark ? [] : [
           BoxShadow(
             color: Colors.grey.withValues(alpha: 0.1),
             blurRadius: 10,
@@ -459,7 +465,7 @@ class _LogScreenState extends State<LogScreen> {
           collapsedIconColor: Colors.grey,
           title: Row(
             children: [
-              Icon(icon, color: const Color(0xFFFF6700), size: 20),
+              Icon(icon, color: AppTheme.primaryOrange, size: 20),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -485,13 +491,13 @@ class _LogScreenState extends State<LogScreen> {
                     width: double.infinity,
                     child: OutlinedButton.icon(
                       onPressed: () => _showAddFoodModal(context, title, uid, db),
-                      icon: const Icon(Icons.add, color: Color(0xFFFF6700), size: 18),
+                      icon: const Icon(Icons.add, color: AppTheme.primaryOrange, size: 18),
                       label: const Text(
                         'Add Food',
-                        style: TextStyle(color: Color(0xFFFF6700)),
+                        style: TextStyle(color: AppTheme.primaryOrange),
                       ),
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: Color(0xFFFF6700)),
+                        side: const BorderSide(color: AppTheme.primaryOrange),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -531,4 +537,3 @@ class _LogScreenState extends State<LogScreen> {
     );
   }
 }
-

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
 
 class SignupScreen extends StatefulWidget {
   final VoidCallback toggleView;
@@ -22,15 +23,15 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final tealColor = isDark ? AppTheme.darkTeal : AppTheme.primaryTeal;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('Register for MacroTrack', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text('Register for MacroTrack', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: loading 
-        ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF6700)))
+        ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryOrange))
         : SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Form(
@@ -39,13 +40,13 @@ class _SignupScreenState extends State<SignupScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 24),
-                  const Icon(Icons.person_add_alt_1, size: 80, color: Color(0xFF006666)),
+                  Icon(Icons.person_add_alt_1, size: 80, color: tealColor),
                   const SizedBox(height: 24),
                   TextFormField(
                     decoration: InputDecoration(
                       labelText: 'Full Name',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF006666))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: tealColor)),
                     ),
                     validator: (val) => val!.isEmpty ? 'Enter a name' : null,
                     onChanged: (val) => setState(() => name = val),
@@ -55,13 +56,12 @@ class _SignupScreenState extends State<SignupScreen> {
                     decoration: InputDecoration(
                       labelText: 'Email',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF006666))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: tealColor)),
                     ),
                     validator: (val) {
                       if (val == null || val.isEmpty) {
                       return 'Enter an email';
                       }
-                      // This simple check is often better than a complex RegEx
                       if (!val.contains('@')) {
                       return 'Please supply a valid email';
                       }
@@ -74,7 +74,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     decoration: InputDecoration(
                       labelText: 'Password',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF006666))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: tealColor)),
                     ),
                     obscureText: true,
                     validator: (val) => val!.length < 6 ? 'Enter a password 6+ chars long' : null,
@@ -95,7 +95,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF006666),
+                      backgroundColor: tealColor,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -106,7 +106,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   const SizedBox(height: 12),
                   TextButton(
                     onPressed: widget.toggleView,
-                    child: const Text('Already have an account? Sign In', style: TextStyle(color: Color(0xFFFF6700))),
+                    child: const Text('Already have an account? Sign In', style: TextStyle(color: AppTheme.primaryOrange)),
                   ),
                   const SizedBox(height: 24),
                   FutureBuilder<PackageInfo>(

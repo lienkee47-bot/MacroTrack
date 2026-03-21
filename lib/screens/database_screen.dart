@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
 
 class DatabaseScreen extends StatefulWidget {
   const DatabaseScreen({super.key});
@@ -57,7 +58,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Migrated $count food(s) to your private library.', style: const TextStyle(color: Colors.white)),
-          backgroundColor: const Color(0xFF006666),
+          backgroundColor: AppTheme.primaryTeal,
         ),
       );
     }
@@ -79,7 +80,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
       _fatTargetCtrl.text = fat.toString();
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Targets Saved', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Targets Saved', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.primaryTeal));
   }
 
   void _saveFood(FirestoreService db, String uid, {String? docId}) {
@@ -94,10 +95,10 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
 
     if (docId == null) {
       db.addFood(uid, name, size, _servingUnit, kcal, prot, carb, fat);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Added to Library', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Added to Library', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.primaryTeal));
     } else {
       db.updateFood(uid, docId, name, size, _servingUnit, kcal, prot, carb, fat);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Updated', style: TextStyle(color: Colors.white)), backgroundColor: Color(0xFF006666)));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Updated', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.primaryTeal));
     }
 
     _foodNameCtrl.clear();
@@ -122,6 +123,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
   }
 
   void _showAddFoodModal(FirestoreService db, String uid, {String? docId, Map<String, dynamic>? existingData}) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (existingData != null) {
       _foodNameCtrl.text = existingData['name']?.toString() ?? '';
       _servingSizeCtrl.text = existingData['servingSize']?.toString() ?? '100';
@@ -151,9 +153,9 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                 bottom: MediaQuery.of(context).viewInsets.bottom,
                 left: 20, right: 20, top: 20,
               ),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: isDark ? AppTheme.darkSurface : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: SingleChildScrollView(
                 child: Column(
@@ -163,7 +165,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(docId == null ? 'Create New Food' : 'Edit Food', style: const TextStyle(color: Color(0xFFFF6700), fontWeight: FontWeight.bold, fontSize: 18)),
+                        Text(docId == null ? 'Create New Food' : 'Edit Food', style: const TextStyle(color: AppTheme.primaryOrange, fontWeight: FontWeight.bold, fontSize: 18)),
                         IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
                       ],
                     ),
@@ -172,7 +174,10 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                     const SizedBox(height: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                       child: TextField(
                         controller: _foodNameCtrl,
                         decoration: const InputDecoration(border: InputBorder.none, hintText: 'e.g. Almond Butter', hintStyle: TextStyle(color: Colors.grey, fontSize: 14)),
@@ -187,7 +192,10 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                           flex: 2,
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                             child: TextField(
                               controller: _servingSizeCtrl,
                               decoration: const InputDecoration(border: InputBorder.none, hintText: '100', hintStyle: TextStyle(color: Colors.grey, fontSize: 14)),
@@ -200,11 +208,15 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                           flex: 1,
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(border: Border.all(color: Colors.grey[300]!), borderRadius: BorderRadius.circular(8)),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton<String>(
                                 value: _servingUnit,
                                 isExpanded: true,
+                                dropdownColor: isDark ? AppTheme.darkSurface : Colors.white,
                                 items: ['g', 'ml', 'pcs'].map((String value) {
                                   return DropdownMenuItem<String>(value: value, child: Text(value));
                                 }).toList(),
@@ -224,13 +236,13 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: _buildMacroInput('Kcal', _foodKcalCtrl)),
+                        Expanded(child: _buildMacroInput('Kcal', _foodKcalCtrl, isDark)),
                         const SizedBox(width: 8),
-                        Expanded(child: _buildMacroInput('Prot (g)', _foodProtCtrl)),
+                        Expanded(child: _buildMacroInput('Prot (g)', _foodProtCtrl, isDark)),
                         const SizedBox(width: 8),
-                        Expanded(child: _buildMacroInput('Carb (g)', _foodCarbCtrl)),
+                        Expanded(child: _buildMacroInput('Carb (g)', _foodCarbCtrl, isDark)),
                         const SizedBox(width: 8),
-                        Expanded(child: _buildMacroInput('Fat (g)', _foodFatCtrl)),
+                        Expanded(child: _buildMacroInput('Fat (g)', _foodFatCtrl, isDark)),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -240,7 +252,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                         child: ElevatedButton(
                           onPressed: () => _saveFood(db, uid),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF6700),
+                            backgroundColor: AppTheme.primaryOrange,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -256,7 +268,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                             child: ElevatedButton(
                               onPressed: () => _deleteFood(db, uid, docId),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF006666),
+                                backgroundColor: isDark ? AppTheme.darkTeal : AppTheme.primaryTeal,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -270,7 +282,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                             child: ElevatedButton(
                               onPressed: () => _saveFood(db, uid, docId: docId),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFF6700),
+                                backgroundColor: AppTheme.primaryOrange,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -295,6 +307,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
   Widget build(BuildContext context) {
     final user = Provider.of<User?>(context);
     final db = Provider.of<FirestoreService>(context, listen: false);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (user == null) return const Center(child: Text('Please log in'));
 
@@ -302,12 +315,9 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     _runMigrationOnce(db);
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
         automaticallyImplyLeading: false,
-        title: const Text('Database', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+        title: const Text('Database', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
       ),
       body: SingleChildScrollView(
@@ -321,7 +331,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                 const Text(
                   'My Daily Targets',
                   style: TextStyle(
-                    color: Color(0xFFFF6700),
+                    color: AppTheme.primaryOrange,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -329,7 +339,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                 ElevatedButton(
                   onPressed: () => _saveTargets(user.uid, db),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6700),
+                    backgroundColor: AppTheme.primaryOrange,
                     minimumSize: const Size(0, 32),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     shape: RoundedRectangleBorder(
@@ -361,17 +371,17 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                   children: [
                     Row(
                       children: [
-                        Expanded(child: _buildTargetInput('Calories (kcal)', _kcalTargetCtrl)),
+                        Expanded(child: _buildTargetInput('Calories (kcal)', _kcalTargetCtrl, isDark)),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildTargetInput('Protein (g)', _protTargetCtrl)),
+                        Expanded(child: _buildTargetInput('Protein (g)', _protTargetCtrl, isDark)),
                       ],
                     ),
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: _buildTargetInput('Carbs (g)', _carbTargetCtrl)),
+                        Expanded(child: _buildTargetInput('Carbs (g)', _carbTargetCtrl, isDark)),
                         const SizedBox(width: 16),
-                        Expanded(child: _buildTargetInput('Fat (g)', _fatTargetCtrl)),
+                        Expanded(child: _buildTargetInput('Fat (g)', _fatTargetCtrl, isDark)),
                       ],
                     ),
                   ],
@@ -386,7 +396,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                 const Text(
                   'My Food Library',
                   style: TextStyle(
-                    color: Color(0xFFFF6700),
+                    color: AppTheme.primaryOrange,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
                   ),
@@ -396,7 +406,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                   icon: const Icon(Icons.add, size: 16, color: Colors.white),
                   label: const Text('New', style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6700),
+                    backgroundColor: AppTheme.primaryOrange,
                     minimumSize: const Size(0, 32),
                     padding: const EdgeInsets.symmetric(horizontal: 12),
                     shape: RoundedRectangleBorder(
@@ -410,12 +420,12 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.grey[100],
+                color: isDark ? AppTheme.darkCard : Colors.grey[100],
                 borderRadius: BorderRadius.circular(24),
               ),
               child: TextField(
                 onChanged: (val) => setState(() => _searchQuery = val),
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   border: InputBorder.none,
                   icon: Icon(Icons.search, color: Colors.grey),
                   hintText: 'Search custom foods...',
@@ -459,6 +469,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                         '${food['protein']}p',
                         '${food['carbs']}c',
                         '${food['fat']}f',
+                        isDark,
                       ),
                     );
                   },
@@ -472,7 +483,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     );
   }
 
-  Widget _buildTargetInput(String label, TextEditingController controller) {
+  Widget _buildTargetInput(String label, TextEditingController controller, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -481,7 +492,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: isDark ? Colors.grey[700]! : Colors.grey[300]!),
             borderRadius: BorderRadius.circular(8),
           ),
           child: TextFormField(
@@ -495,15 +506,19 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     );
   }
 
-  Widget _buildFoodLibraryItem(String name, String calInfo, String p, String c, String f) {
+  Widget _buildFoodLibraryItem(String name, String calInfo, String p, String c, String f, bool isDark) {
+    final cardBg = isDark ? AppTheme.darkCard : Colors.white;
+    final borderColor = isDark ? Colors.grey[800]! : Colors.grey[200]!;
+    final chipBg = isDark ? Colors.grey[800]! : Colors.grey[200]!;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
-        boxShadow: [
+        border: Border.all(color: borderColor),
+        boxShadow: isDark ? [] : [
           BoxShadow(
             color: Colors.grey.withValues(alpha: 0.05),
             blurRadius: 5,
@@ -527,11 +542,11 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
           const SizedBox(width: 12),
           Row(
             children: [
-              _buildMacroChip(p, Colors.grey[200]!),
+              _buildMacroChip(p, chipBg),
               const SizedBox(width: 4),
-              _buildMacroChip(c, Colors.grey[200]!),
+              _buildMacroChip(c, chipBg),
               const SizedBox(width: 4),
-              _buildMacroChip(f, Colors.grey[200]!),
+              _buildMacroChip(f, chipBg),
             ],
           ),
         ],
@@ -550,7 +565,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     );
   }
 
-  Widget _buildMacroInput(String label, TextEditingController controller) {
+  Widget _buildMacroInput(String label, TextEditingController controller, bool isDark) {
     return Column(
       children: [
         Text(label, style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
@@ -558,7 +573,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
         Container(
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.grey[100],
+            color: isDark ? AppTheme.darkCard : Colors.grey[100],
             borderRadius: BorderRadius.circular(8),
           ),
           child: TextField(

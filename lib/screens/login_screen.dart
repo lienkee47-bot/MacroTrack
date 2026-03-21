@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../services/auth_service.dart';
+import '../theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   final VoidCallback toggleView;
@@ -21,15 +22,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: const Text('Sign In to MacroTrack', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+        title: const Text('Sign In to MacroTrack', style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: loading 
-        ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF6700)))
+        ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryOrange))
         : SingleChildScrollView(
             padding: const EdgeInsets.all(24.0),
             child: Form(
@@ -38,19 +38,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 48),
-                  const Icon(Icons.local_fire_department, size: 80, color: Color(0xFFFF6700)),
+                  const Icon(Icons.local_fire_department, size: 80, color: AppTheme.primaryOrange),
                   const SizedBox(height: 48),
                   TextFormField(
                     decoration: InputDecoration(
                       labelText: 'Email',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFF6700))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primaryOrange)),
                     ),
                     validator: (val) {
                       if (val == null || val.isEmpty) {
                       return 'Enter an email';
                       }
-                      // This simple check is often better than a complex RegEx
                       if (!val.contains('@')) {
                       return 'Please supply a valid email';
                       }
@@ -63,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Password',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFFF6700))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppTheme.primaryOrange)),
                     ),
                     obscureText: true,
                     validator: (val) => val!.length < 6 ? 'Enter a password 6+ chars long' : null,
@@ -84,7 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       }
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6700),
+                      backgroundColor: AppTheme.primaryOrange,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -95,7 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 12),
                   TextButton(
                     onPressed: widget.toggleView,
-                    child: const Text('Need an account? Register', style: TextStyle(color: Color(0xFF006666))),
+                    child: Text('Need an account? Register', style: TextStyle(color: isDark ? AppTheme.darkTeal : AppTheme.primaryTeal)),
                   ),
                   const SizedBox(height: 24),
                   FutureBuilder<PackageInfo>(
