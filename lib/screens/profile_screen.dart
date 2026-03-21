@@ -35,7 +35,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  Future<void> _pickImage(String uid, FirestoreService db) async {
+  void _showPhotoOptions(String uid, FirestoreService db, bool hasExistingPhoto) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40, height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library, color: AppTheme.primaryOrange),
+                  title: Text(hasExistingPhoto ? 'Update Profile Picture' : 'Upload Profile Picture'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickAndUploadImage(uid, db);
+                  },
+                ),
+                if (hasExistingPhoto)
+                  ListTile(
+                    leading: Icon(Icons.delete_outline, color: isDark ? AppTheme.darkTeal : AppTheme.primaryTeal),
+                    title: const Text('Remove Profile Picture'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _removeProfilePicture(uid, db);
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickAndUploadImage(String uid, FirestoreService db) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -49,16 +96,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
         
         if (url != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Profile picture updated'), backgroundColor: AppTheme.primaryTeal),
+            const SnackBar(content: Text('Profile picture updated', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.primaryTeal),
           );
         }
       } catch (e) {
         if (!mounted) return;
         setState(() => _isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Image upload failed: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Image upload failed: $e', style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red),
         );
       }
+    }
+  }
+
+  Future<void> _removeProfilePicture(String uid, FirestoreService db) async {
+    try {
+      await db.updateUserField(uid, {'profilePictureUrl': ''});
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile picture removed', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.primaryTeal),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to remove picture: $e', style: const TextStyle(color: Colors.white)), backgroundColor: Colors.red),
+      );
     }
   }
 
@@ -97,7 +159,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   db.updateUserField(uid, {fieldName: finalVal});
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('$title updated'), backgroundColor: AppTheme.primaryTeal),
+                    SnackBar(content: Text('$title updated', style: const TextStyle(color: Colors.white)), backgroundColor: AppTheme.primaryTeal),
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -118,7 +180,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _resetPassword(String email) {
     AuthService().sendPasswordReset(email);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Password reset email sent'), backgroundColor: AppTheme.primaryTeal),
+      const SnackBar(content: Text('Password reset email sent', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.primaryTeal),
     );
   }
 
@@ -219,7 +281,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         bottom: 0,
                         right: 0,
                         child: GestureDetector(
-                          onTap: () => _pickImage(user.uid, db),
+                          onTap: () => _showPhotoOptions(user.uid, db, hasValidImage),
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: const BoxDecoration(

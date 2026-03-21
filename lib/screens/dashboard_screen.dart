@@ -87,26 +87,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
           stream: db.getUserProfile(user.uid),
           builder: (context, profileSnap) {
             String userName = user.displayName ?? 'User';
+            String? photoUrl;
             if (profileSnap.hasData && profileSnap.data!.exists) {
               var data = profileSnap.data!.data() as Map<String, dynamic>?;
               userName = data?['name'] ?? userName;
+              photoUrl = data?['profilePictureUrl'] ?? data?['photoUrl'];
             }
+            final bool hasPhoto = photoUrl != null && photoUrl.trim().isNotEmpty;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 18,
                       backgroundColor: Colors.grey,
-                      child: Icon(Icons.person, color: Colors.white),
+                      backgroundImage: hasPhoto ? NetworkImage(photoUrl) : null,
+                      child: hasPhoto ? null : const Icon(Icons.person, color: Colors.white),
                     ),
                     const SizedBox(width: 12),
-                    Text(
-                      '${_getGreeting()}, $userName',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                    Expanded(
+                      child: Text(
+                        '${_getGreeting()}, $userName',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),

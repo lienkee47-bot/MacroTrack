@@ -2,12 +2,13 @@
 
 ---
 
-## (2.0.1) - ?? March 2026
+## (2.1.0) - ?? March 2026
 
 ### Added
 - **Dynamic Greeting**: Implemented time-based header logic ("Good morning/afternoon/evening") based on local device time.
 - **Chart Annotations**: Added 1-decimal place value labels to the `7-Day Trend` line chart for better data legibility.
-- **Dark Mode UI**: Added Light/Dark Mode toggle on `Profile` screen.
+- **Dark Mode UI**: Added Dark Mode across the app. Light/Dark Mode toggle on `Profile` screen.
+- **Profile Picture**: Enabled user's profile picture update and removal.
 
 ### Changed
 - **Calorie Summary UI**: Refactored the 'Daily Status' card subtext to display an explicit "Consumed / Target" breakdown instead of just the target.
