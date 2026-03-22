@@ -2,14 +2,14 @@
 
 ---
 
-## (2.1.0) - ?? March 2026
+## [2.1.0] - 23 March 2026
 
 ### Added
-- **Dynamic Greeting**: Implemented time-based header logic ("Good morning/afternoon/evening") based on local device time.
-- **Chart Annotations**: Added 1-decimal place value labels to the `7-Day Trend` line chart for better data legibility.
+- **Food Library**: Added 2 alternative ways to register food item into Food Library - scanning barcode/QR code and image-to-text macro data extraction. Feature under improvement, effectiveness may vary.
 - **Dark Mode UI**: Added Dark Mode across the app. Light/Dark Mode toggle on `Profile` screen.
 - **Profile Picture**: Enabled user's profile picture update and removal.
-- **Food Library Registration**: ?????
+- **Dynamic Greeting**: Implemented time-based `Dashboard` header logic ("Good morning/afternoon/evening") based on local device time.
+- **Chart Label**: Added 1-decimal place value labels to the `7-Day Trend` line chart for better data legibility.
 
 ### Changed
 - **Calorie Summary UI**: Refactored the 'Daily Status' card subtext to display an explicit "Consumed / Target" breakdown instead of just the target.
