@@ -3,8 +3,13 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:image_picker/image_picker.dart';
 import '../services/firestore_service.dart';
+import '../services/ocr_processor_service.dart';
+import '../models/food_model.dart';
+import '../widgets/registration_method_selector.dart';
 import '../theme/app_theme.dart';
+import 'barcode_scanner_view.dart';
 
 class DatabaseScreen extends StatefulWidget {
   const DatabaseScreen({super.key});
@@ -31,6 +36,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
 
   String _searchQuery = '';
   bool _targetsInitialized = false;
+  bool _isProcessing = false;
 
   @override
   void dispose() {
@@ -122,9 +128,123 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Food Deleted', style: TextStyle(color: Colors.white)), backgroundColor: Colors.red));
   }
 
-  void _showAddFoodModal(FirestoreService db, String uid, {String? docId, Map<String, dynamic>? existingData}) {
+  // ── 3-Way Registration Flow ────────────────────────────────
+
+  Future<void> _onNewFoodPressed(FirestoreService db, String uid) async {
+    final method = await RegistrationMethodSelector.show(context);
+    if (method == null || !mounted) return;
+
+    switch (method) {
+      case RegistrationMethod.barcode:
+        await _handleBarcodeScan(db, uid);
+        break;
+      case RegistrationMethod.ocr:
+        await _handleOcrCapture(db, uid);
+        break;
+      case RegistrationMethod.manual:
+        _showAddFoodModal(db, uid);
+        break;
+    }
+  }
+
+  Future<void> _handleBarcodeScan(FirestoreService db, String uid) async {
+    final food = await Navigator.push<FoodModel>(
+      context,
+      MaterialPageRoute(builder: (_) => const BarcodeScannerView()),
+    );
+    if (food != null && mounted) {
+      _showAddFoodModal(db, uid, prefillData: food);
+    }
+  }
+
+  Future<void> _handleOcrCapture(FirestoreService db, String uid) async {
+    // Let user choose between camera and gallery
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        final isDark = Theme.of(ctx).brightness == Brightness.dark;
+        return Container(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.darkSurface : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text('Capture Nutrition Label',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryOrange)),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.camera_alt_rounded, color: isDark ? AppTheme.darkTeal : AppTheme.primaryTeal),
+                title: const Text('Take Photo'),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                tileColor: isDark ? AppTheme.darkCard : Colors.grey[50],
+                onTap: () => Navigator.pop(ctx, ImageSource.camera),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Icon(Icons.photo_library_rounded, color: isDark ? AppTheme.darkTeal : AppTheme.primaryTeal),
+                title: const Text('Upload from Gallery'),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                tileColor: isDark ? AppTheme.darkCard : Colors.grey[50],
+                onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (source == null || !mounted) return;
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: source);
+    if (picked == null || !mounted) return;
+
+    setState(() => _isProcessing = true);
+    try {
+      final food = await OcrProcessorService.extractFromImage(picked.path);
+      if (mounted) {
+        _showAddFoodModal(db, uid, prefillData: food);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not read the label. Please try again or enter manually.',
+              style: TextStyle(color: Colors.white)),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessing = false);
+    }
+  }
+
+  // ── Food Form Modal ───────────────────────────────────────
+
+  void _showAddFoodModal(FirestoreService db, String uid, {String? docId, Map<String, dynamic>? existingData, FoodModel? prefillData}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    if (existingData != null) {
+    if (prefillData != null) {
+      _foodNameCtrl.text = prefillData.name;
+      _servingSizeCtrl.text = prefillData.servingSize.toString();
+      _servingUnit = prefillData.servingUnit;
+      _foodKcalCtrl.text = prefillData.kcal > 0 ? prefillData.kcal.toString() : '';
+      _foodProtCtrl.text = prefillData.protein > 0 ? prefillData.protein.toString() : '';
+      _foodCarbCtrl.text = prefillData.carbs > 0 ? prefillData.carbs.toString() : '';
+      _foodFatCtrl.text = prefillData.fat > 0 ? prefillData.fat.toString() : '';
+    } else if (existingData != null) {
       _foodNameCtrl.text = existingData['name']?.toString() ?? '';
       _servingSizeCtrl.text = existingData['servingSize']?.toString() ?? '100';
       _servingUnit = existingData['servingUnit']?.toString() ?? 'g';
@@ -320,7 +440,8 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
         title: const Text('Database', style: TextStyle(fontWeight: FontWeight.bold)),
         centerTitle: false,
       ),
-      body: SingleChildScrollView(
+      body: Stack(children: [
+        SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,7 +523,7 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () => _showAddFoodModal(db, user.uid),
+                  onPressed: () => _onNewFoodPressed(db, user.uid),
                   icon: const Icon(Icons.add, size: 16, color: Colors.white),
                   label: const Text('New', style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
@@ -480,6 +601,23 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
           ],
         ),
       ),
+      // Processing overlay
+      if (_isProcessing)
+        Container(
+          color: Colors.black.withValues(alpha: 0.5),
+          child: const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: AppTheme.primaryOrange),
+                SizedBox(height: 16),
+                Text('Processing image…',
+                  style: TextStyle(color: Colors.white, fontSize: 14)),
+              ],
+            ),
+          ),
+        ),
+    ]),
     );
   }
 
