@@ -48,3 +48,6 @@ app.*.map.json
 google-services.json
 Info.plist
 firebase_options.dart
+
+# Generated Files
+macos/Flutter/GeneratedPluginRegistrant.swift
