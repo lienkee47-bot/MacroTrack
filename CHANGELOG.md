@@ -2,6 +2,14 @@
 
 ---
 
+## (2.1.1) - ?? March 2026
+
+### Fixed
+- **Barcode/QR scanner**: xxxx.
+- **Image-to-Text OCR**: xxxx.
+
+---
+
 ## [2.1.0] - 23 March 2026
 
 ### Added
