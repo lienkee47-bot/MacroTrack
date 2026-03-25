@@ -38,75 +38,83 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchFoodByBarcode = void 0;
 const functions = __importStar(require("firebase-functions"));
-const params_1 = require("firebase-functions/params"); // New 2026 way
+const params_1 = require("firebase-functions/params");
 const node_fetch_1 = __importDefault(require("node-fetch"));
 const crypto = __importStar(require("crypto"));
-// 1. Define the secrets at the top level
 const fatSecretKey = (0, params_1.defineSecret)("FATSECRET_CONSUMER_KEY");
 const fatSecretSecret = (0, params_1.defineSecret)("FATSECRET_CONSUMER_SECRET");
 const API_URL = "https://platform.fatsecret.com/rest/server.api";
 function percentEncode(str) {
     return encodeURIComponent(str).replace(/[!'()*~]/g, (c) => "%" + c.charCodeAt(0).toString(16).toUpperCase());
 }
-function generateOAuthSignature(params, consumerSecret) {
-    const sortedKeys = Object.keys(params).sort();
-    const sortedParams = sortedKeys.map(k => `${percentEncode(k)}=${percentEncode(params[k])}`).join('&');
-    const signatureBaseString = `POST&${percentEncode(API_URL)}&${percentEncode(sortedParams)}`;
-    const signingKey = `${percentEncode(consumerSecret)}&`;
-    return crypto.createHmac("sha1", signingKey).update(signatureBaseString).digest("base64");
-}
-// 2. Attach the secrets to the function
-exports.fetchFoodByBarcode = functions
-    .runWith({ secrets: ["FATSECRET_CONSUMER_KEY", "FATSECRET_CONSUMER_SECRET"] })
-    .https.onCall(async (data) => {
-    var _a, _b;
-    const barcode = data === null || data === void 0 ? void 0 : data.barcode;
-    if (!barcode)
-        throw new functions.https.HttpsError("invalid-argument", "No barcode provided.");
-    const gtin = barcode.padStart(13, "0");
-    // 3. Access the values directly
-    const consumerKey = fatSecretKey.value();
-    const consumerSecret = fatSecretSecret.value();
-    const params = {
-        method: "food.find_id_for_barcode.v2",
-        oauth_consumer_key: consumerKey,
-        oauth_nonce: crypto.randomBytes(16).toString("hex"),
-        oauth_signature_method: "HMAC-SHA1",
-        oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-        oauth_version: "1.0",
-        barcode: gtin,
-        region: "MY",
-        format: "json",
-    };
-    params.oauth_signature = generateOAuthSignature(params, consumerSecret);
-    const body = Object.keys(params).map(k => `${percentEncode(k)}=${percentEncode(params[k])}`).join('&');
+async function callFatSecret(params, secret) {
+    const oauthParams = Object.assign(Object.assign({}, params), { oauth_consumer_key: fatSecretKey.value(), oauth_nonce: crypto.randomBytes(16).toString("hex"), oauth_signature_method: "HMAC-SHA1", oauth_timestamp: Math.floor(Date.now() / 1000).toString(), oauth_version: "1.0", format: "json" });
+    const sortedKeys = Object.keys(oauthParams).sort();
+    const baseParams = sortedKeys.map(k => `${percentEncode(k)}=${percentEncode(oauthParams[k])}`).join('&');
+    const baseString = `POST&${percentEncode(API_URL)}&${percentEncode(baseParams)}`;
+    const signingKey = `${percentEncode(secret)}&`;
+    const signature = crypto.createHmac("sha1", signingKey).update(baseString).digest("base64");
+    const body = baseParams + `&oauth_signature=${percentEncode(signature)}`;
     const res = await (0, node_fetch_1.default)(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: body,
     });
-    const rawText = await res.text();
-    let json;
+    return await res.json();
+}
+exports.fetchFoodByBarcode = functions
+    .runWith({ secrets: ["FATSECRET_CONSUMER_KEY", "FATSECRET_CONSUMER_SECRET"] })
+    .https.onCall(async (data) => {
+    var _a, _b;
+    // --- UNIVERSAL ERROR SHIELD ---
+    // This try-catch ensures the user never sees technical logs.
     try {
-        json = JSON.parse(rawText);
+        const barcode = data === null || data === void 0 ? void 0 : data.barcode;
+        if (!barcode)
+            throw new Error("Missing barcode");
+        const gtin = barcode.padStart(13, "0");
+        const secret = fatSecretSecret.value();
+        // STEP 1: Find the food_id
+        const searchJson = await callFatSecret({
+            method: "food.find_id_for_barcode",
+            barcode: gtin
+        }, secret);
+        const foodId = (_a = searchJson === null || searchJson === void 0 ? void 0 : searchJson.food_id) === null || _a === void 0 ? void 0 : _a.value;
+        if (!foodId || foodId === "0" || searchJson.error) {
+            throw new Error("API_NOT_FOUND");
+        }
+        // STEP 2: Get full nutrition details
+        const detailJson = await callFatSecret({
+            method: "food.get.v4", // v4 includes better metric data
+            food_id: foodId
+        }, secret);
+        const food = detailJson === null || detailJson === void 0 ? void 0 : detailJson.food;
+        if (!food || detailJson.error) {
+            throw new Error("API_NOT_FOUND");
+        }
+        // Handle the "single serving vs array" quirk in FatSecret
+        const servingsList = (_b = food.servings) === null || _b === void 0 ? void 0 : _b.serving;
+        const s = Array.isArray(servingsList) ? servingsList[0] : servingsList;
+        if (!s)
+            throw new Error("NO_SERVING_DATA");
+        // Extract and format data
+        return {
+            name: food.food_name || "Unknown Product",
+            brand: food.brand_name || "Generic",
+            kcal: Math.round(parseFloat(s.calories || "0")),
+            protein: parseFloat(s.protein || "0"),
+            carbs: parseFloat(s.carbohydrate || "0"),
+            fat: parseFloat(s.fat || "0"),
+            // NEW: Serving size and unit extraction
+            servingSize: parseFloat(s.metric_serving_amount || "1"),
+            servingUnit: s.metric_serving_unit || s.serving_description || "unit",
+        };
     }
-    catch (e) {
-        throw new functions.https.HttpsError("internal", "API sent back something that wasn't JSON.");
+    catch (err) {
+        // LOG THE ACTUAL ERROR FOR YOU (The Developer)
+        functions.logger.error("Internal Function Error:", err);
+        // THROW THE CLEAN ERROR FOR THE USER
+        throw new functions.https.HttpsError("not-found", "Product not found. Please use other methods.");
     }
-    if (json.error) {
-        throw new functions.https.HttpsError("internal", `FatSecret Error: [${json.error.code}] ${json.error.message}`);
-    }
-    const food = json === null || json === void 0 ? void 0 : json.food;
-    if (!food)
-        throw new functions.https.HttpsError("not-found", "Product not found in MY database.");
-    const s = Array.isArray((_a = food.servings) === null || _a === void 0 ? void 0 : _a.serving) ? food.servings.serving[0] : (_b = food.servings) === null || _b === void 0 ? void 0 : _b.serving;
-    return {
-        name: food.food_name,
-        brand: food.brand_name || "Generic",
-        kcal: parseFloat(s === null || s === void 0 ? void 0 : s.calories) || 0,
-        protein: parseFloat(s === null || s === void 0 ? void 0 : s.protein) || 0,
-        carbs: parseFloat(s === null || s === void 0 ? void 0 : s.carbohydrate) || 0,
-        fat: parseFloat(s === null || s === void 0 ? void 0 : s.fat) || 0,
-    };
 });
 //# sourceMappingURL=index.js.map
