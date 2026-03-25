@@ -5,8 +5,8 @@
 ## (2.1.1) - ?? March 2026
 
 ### Fixed
-- **Barcode/QR scanner**: xxxx.
-- **Image-to-Text OCR**: xxxx.
+- **Barcode/QR scanner**: Fixed connection to FatSecret's API allowing for US-region barcode search.
+- **Image-to-Text OCR**: Refactored OCR mechanism for more accurate data extraction.
 
 ---
 
