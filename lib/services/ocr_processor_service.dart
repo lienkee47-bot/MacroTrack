@@ -4,6 +4,9 @@ import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/food_model.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 
 class OcrProcessorService {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -12,34 +15,46 @@ class OcrProcessorService {
   /// The main entry point to scan a label using the new backend pipeline.
   static Future<FoodModel> extractFromImage(String imagePath) async {
     final String scanId = DateTime.now().millisecondsSinceEpoch.toString();
-    final File imageFile = File(imagePath);
-
+  
     try {
-      // 1. Upload the image to the 'ocr_pics' folder
+      // 1. PRE-PROCESSING: Compress and Resize
+      // This reduces a 15MB file to ~500KB while keeping text sharp
+      final String targetPath = p.join((await getTemporaryDirectory()).path, '${scanId}_compressed.jpg');
+    
+      final XFile? compressedXFile = await FlutterImageCompress.compressAndGetFile(
+        imagePath, 
+        targetPath,
+        quality: 80,         // Balance between file size and text clarity
+        minWidth: 1080,      // Forces the image into a standard HD width
+        minHeight: 1920,     // Ensures vertical labels remain high-res
+        keepExif: false,     // CRITICAL: Strips EXIF so rotation is "baked in"
+      );
+
+      if (compressedXFile == null) throw Exception("Image compression failed");
+      final File fileToUpload = File(compressedXFile.path);
+
+      // 2. UPLOAD: Use the new, smaller file
       final Reference storageRef = _storage.ref().child('ocr_pics/$scanId.jpg');
-      await storageRef.putFile(imageFile);
-      
-      // Get the gs:// path (Internal Firebase path used by the extension)
+      await storageRef.putFile(fileToUpload); //
+    
       final String gsPath = 'gs://${storageRef.bucket}/${storageRef.fullPath}';
 
-      // 2. Trigger the Gemini extension by creating a Firestore document
+      // 3. TRIGGER & LISTEN: (Rest of your existing Firestore logic)
       final DocumentReference docRef = _db.collection('foodScans').doc(scanId);
       await docRef.set({
         'image_url': gsPath,
         'status': 'processing',
       });
 
-      // 3. Listen for the 'extracted_data' field to be populated
-      // We use a timeout to ensure the app doesn't wait forever if the network fails
       return await docRef.snapshots()
           .map((snap) => _parseExtensionResult(snap))
           .where((food) => food != null)
           .cast<FoodModel>()
           .first
-          .timeout(const Duration(seconds: 30));
-          
+          .timeout(const Duration(seconds: 30)); //
+        
     } catch (e) {
-      throw Exception('Failed to process label: $e');
+      throw Exception('Resolution pre-processing failed: $e');
     }
   }
 
