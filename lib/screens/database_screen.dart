@@ -365,6 +365,23 @@ class _DatabaseScreenState extends State<DatabaseScreen> {
                         Expanded(child: _buildMacroInput('Fat (g)', _foodFatCtrl, isDark)),
                       ],
                     ),
+                    if (prefillData != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.info_outline, color: AppTheme.primaryOrange, size: 16),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Please verify the data before saving. AI and barcode search may occasionally have mistakes.',
+                                style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600], fontSize: 12, fontStyle: FontStyle.italic),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     const SizedBox(height: 24),
                     if (docId == null)
                       SizedBox(
