@@ -2,6 +2,19 @@
 
 ---
 
+## [2.1.1] - 27 March 2026
+
+### Added
+- **User Reminder**: Added reminder message to verify data before saving to Food Library if user is registering with Barcode/QR Scanner or Image-to-Text method.
+
+### Changed
+- **Image-to-Text OCR**: Refactored OCR mechanism from on-device ML kit to cloud-based multimodal Gemini AI pipeline via Firebase Extension.
+
+### Fixed
+- **Barcode/QR scanner**: Fixed connection to FatSecret's API allowing for US-region barcode search.
+
+---
+
 ## [2.1.0] - 23 March 2026
 
 ### Added
@@ -9,10 +22,10 @@
 - **Dark Mode UI**: Added Dark Mode across the app. Light/Dark Mode toggle on `Profile` screen.
 - **Profile Picture**: Enabled user's profile picture update and removal.
 - **Dynamic Greeting**: Implemented time-based `Dashboard` header logic ("Good morning/afternoon/evening") based on local device time.
-- **Chart Label**: Added 1-decimal place value labels to the `7-Day Trend` line chart for better data legibility.
+- **Chart Label**: Added 1-decimal place value labels to the 7-Day Trend line chart for better data legibility.
 
 ### Changed
-- **Calorie Summary UI**: Refactored the 'Daily Status' card subtext to display an explicit "Consumed / Target" breakdown instead of just the target.
+- **Calorie Summary UI**: Refactored the Daily Status card subtext to display an explicit "Consumed / Target" breakdown instead of just the target.
 
 ### Fixed
 - **Pixel Overflow Error**: Resolved a "Bottom Overflowed" UI bug on the `Database` screen.

@@ -4,18 +4,28 @@ MacroTrack is a high-fidelity mobile MVP designed to bridge the gap between diet
 ## 📱 Key Features
 * Dynamic Dashboard: High-level summaries featuring a Teal circular progress ring for calorie targets and horizontal progress bars for macronutrient (Protein, Carbs, Fat) tracking.
 
-* 7-Day Trend Analysis: Integrated line charts to monitor intake fluctuations over time, providing users with actionable historical data.
+* 7-Day Calorie Trend: Integrated line charts to monitor intake fluctuations over time, providing users with actionable historical data.
+
+* 7-Day Macronutrient Distribution: Interactive pie chart providing users visibility on macronutrient intake proportion across meals in the last 7 days. Users can toggle between different macros.
 
 * Real-Time Meal Logging: A categorized input system (Breakfast, Lunch, Dinner, Snacks) that fetches and updates data via Firebase Firestore in real-time.
 
-* Centralized Nutrition Database: A CRUD-enabled library where users can define custom food items and set specific daily intake targets in kcal and grams.
+* Private Nutrition Database: A CRUD-enabled library where users can define custom food items and set specific daily intake targets in kcal and grams.
+
+* Multi-method Database Input: Besides manual data entry, users can efficiently register food items by scanning UPC barcode/QR code (currently limited to US-region products), or auto-fill data via AI-powered OCR.
 
 ## 🛠 Technical Stack
 * Frontend: Flutter (Dart) for high-performance, cross-platform UI.
 
-* Backend: Firebase Firestore (NoSQL) for scalable, real-time data persistence.
+* Database: Firebase Firestore (NoSQL) for scalable, real-time data persistence.
 
 * Authentication: Firebase Auth for secure user account management.
+
+* Strorage: Firebase Storage utilizing internal `gs://` paths for storing uploaded images e.g. profile pictures.
+
+* External API: FatSecret Platform API (REST) for US-region UPC barcode lookup and nutritional database synchronization.
+
+* AI Integration: Firebase Extension (Multimodal Tasks with Gemini, model: Gemini 2.5 Flash) to automate the bridge between image uploads and structured data extraction.
 
 * Version Control: Git/GitHub managed via professional workflow (Staging, Commits, and Branching).
 
@@ -78,6 +88,4 @@ The UI utilizes a high-contrast Orange (#ff6700) and Teal (#006666) color scheme
 * Teal: Reserved for data visualization, progress completion, and success states.
 
 ## 🚀 Future Roadmap
-* AI Integration: Implementing image recognition to log meals via camera snapshots.
-
-* Sustainability Focus: Adding "Carbon Footprint" tracking for food items.
+* Pricing tiers: Introduce additional paid subscription tiers to access more advanced features.
