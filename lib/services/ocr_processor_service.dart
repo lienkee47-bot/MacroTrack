@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -40,10 +41,19 @@ class OcrProcessorService {
       final String gsPath = 'gs://${storageRef.bucket}/${storageRef.fullPath}';
 
       // 3. TRIGGER & LISTEN: (Rest of your existing Firestore logic)
-      final DocumentReference docRef = _db.collection('foodScans').doc(scanId);
+      final String? userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) throw Exception("User not authenticated");
+      
+      final DocumentReference docRef = _db
+        .collection('foodScans')
+        .doc(userId)
+        .collection('userScans')
+        .doc(scanId);
+
       await docRef.set({
         'image_url': gsPath,
         'status': 'processing',
+        'timestamp': FieldValue.serverTimestamp(), // Good practice for sorting
       });
 
       return await docRef.snapshots()

@@ -2,6 +2,13 @@
 
 ---
 
+## [2.1.2] - 10 April 2026
+
+### Fixed
+- **Image-to-Text OCR**: Fixed recent functionality loss due to Firestore security rules update.
+
+---
+
 ## [2.1.1] - 27 March 2026
 
 ### Added
